@@ -4,7 +4,7 @@ import playwright from 'playwright';
 // @ts-ignore
 import { selectorEngine } from "query-selector-shadow-dom/plugins/playwright";
 
-const CONFIG = `
+const hass = new HassTest(`
 input_number:
   slider1:
     name: Slider
@@ -12,9 +12,8 @@ input_number:
     min: -20
     max: 35
     step: 1
-`;
+`);
 
-const hass = new HassTest('/Users/ryan/Documents/git/home-assistant-core/venv', CONFIG);
 (async () => {
     await hass.start();
     await playwright.selectors.register('shadow', selectorEngine);
@@ -25,9 +24,11 @@ const hass = new HassTest('/Users/ryan/Documents/git/home-assistant-core/venv', 
     await page.goto(hass.dashboard);
 
     const elementHandle = await page.waitForSelector('shadow=hui-input-number-entity-row');
-    await elementHandle!.screenshot({ path: `example.png` });
+    await elementHandle!.screenshot({ path: 'example.png' });
+
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     await browser.close();
 })().finally(() => {
-    hass.close();
+    return hass.close();
 });

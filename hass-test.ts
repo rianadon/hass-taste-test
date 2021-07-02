@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, ChildProcess, execFile } from 'child_process'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { mkdtemp, writeFile, rm } from 'fs'
@@ -7,6 +7,7 @@ import fetch from 'node-fetch'
 import { createConnection } from 'net'
 
 interface HassTestOptions {
+    python: string
     hassArgs: string[]
     host: string
     port: number
@@ -23,23 +24,30 @@ http:
   server_port: ${options.port}
 `
 
+const exec = (command: string, args: string[]) => new Promise((resolve, reject) => {
+    const proc = spawn(command, args, { stdio: 'inherit' })
+    proc.on('error', err => reject(err))
+    proc.on('close', code => resolve(code))
+})
+
 export default class HassTestLauncher {
 
+    private venvDir!: string
     private configDir!: string
     private configFile!: string
 
-    private hassBinary: string
     private process!: ChildProcess
     private accessCode!: string
     private accessToken!: string
     private options: HassTestOptions
 
-    constructor(private venv: string, private config: string, options?: Partial<HassTestOptions>) {
-        this.hassBinary = join(this.venv, 'bin/hass')
+    constructor(private config: string, options?: Partial<HassTestOptions>) {
+        this.venvDir = join(tmpdir(), 'hasstest-venv')
         this.options = {
-            host: 'localhost',
-            port: 8091,
+            python: 'python3',
             hassArgs: [],
+            host: '127.0.0.1',
+            port: 8091,
             username: 'dev',
             password: 'dev',
             userLanguage: 'en',
@@ -52,10 +60,10 @@ export default class HassTestLauncher {
     public async start() {
         this.configDir = await promisify(mkdtemp)(join(tmpdir(), 'hasstest-'))
         this.configFile = join(this.configDir, 'configuration.yaml')
-        console.log(this.configFile)
         await promisify(writeFile)(this.configFile, DEFAULT_CONFIG(this.options) + this.config)
 
-        this.process = spawn(this.hassBinary, ['-c', this.configDir, ...this.options.hassArgs], {
+        await this.setupVenv()
+        this.process = spawn(join(this.venvDir, 'bin/hass'), ['-c', this.configDir, ...this.options.hassArgs], {
             stdio: 'inherit'
         })
 
@@ -63,6 +71,21 @@ export default class HassTestLauncher {
         await this.onboard()
     }
 
+    /** Creates a python virtual environment and installs Home Assistant */
+    private async setupVenv() {
+        await exec(this.options.python, ['-m', 'venv', this.venvDir])
+
+        // Check if homeassistant needs an upgrade; saves a bit of time if it doesn't need one
+        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then(r => r.json())
+        const { stdout } = await promisify(execFile)(join(this.venvDir, 'bin/pip'), ['freeze'])
+        const installed = stdout.split('\n').find(v => v.startsWith('homeassistant=='))
+
+        if (!installed || installed.split('==')[1] !== latest.info.version) {
+            await exec(join(this.venvDir, 'bin/pip'), ['install', '--upgrade', 'homeassistant'])
+        }
+    }
+
+    /** Checks if Home Assistant is listening on its TCP port */
     private isUp = () => new Promise(resolve => {
         createConnection(this.options.port, this.options.host).on('connect', () => {
             resolve(true)
@@ -82,8 +105,9 @@ export default class HassTestLauncher {
         this.accessCode = login.auth_code
         this.accessToken = (await this.fetchToken(this.accessCode)).access_token
 
-        console.log('core_config', await this.post('/api/onboarding/core_config', {}, true))
-        console.log('analytics', await this.post('/api/onboarding/analytics', {}, true))
+        // Step through the onboarding pages
+        await this.post('/api/onboarding/core_config', {}, true)
+        await this.post('/api/onboarding/analytics', {}, true)
         const response = await this.post('/api/onboarding/integration', {
             redirect_uri: this.url + '/?auth_callback=1'
         }, true)
@@ -92,10 +116,8 @@ export default class HassTestLauncher {
 
     get url() { return `http://${this.options.host}:${this.options.port}` }
     get dashboard() {
-        const state = Buffer.from(JSON.stringify({
-            hassUrl: this.url,
-            clientId: this.url + '/'
-        })).toString('base64')
+        if (!this.accessCode) throw new Error("You haven't logged into Home Assistant yet. Have you called hasstest.start()?")
+        const state = Buffer.from(JSON.stringify({ hassUrl: this.url, clientId: this.url + '/' })).toString('base64')
         return this.url + `/?auth_callback=1&code=${encodeURIComponent(this.accessCode)}&state=${encodeURIComponent(state)}`
     }
 
