@@ -22,17 +22,9 @@ const hass = new HassTest('/Users/ryan/Documents/git/home-assistant-core/venv', 
     const browser = await playwright.firefox.launch({ headless: false, slowMo: 100 });
     const context = await browser.newContext();
     const page = await context.newPage();
-    await page.goto('http://localhost:8091/');
-    await page.waitForNavigation();
+    await page.goto(hass.dashboard);
 
-    await page.fill('input[type="text"]', 'dev');
-    await page.fill('input[type="password"]', 'dev');
-
-    await Promise.all([page.waitForNavigation(), page.click('text=Next')]);
-
-    await new Promise(resolve => setTimeout(resolve, 10000));
-
-    const elementHandle = await page.$('shadow=hui-input-number-entity-row');
+    const elementHandle = await page.waitForSelector('shadow=hui-input-number-entity-row');
     await elementHandle!.screenshot({ path: `example.png` });
 
     await browser.close();

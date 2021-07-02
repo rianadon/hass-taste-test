@@ -9,6 +9,7 @@
   "author": "",
   "license": "AGPL-3.0-or-later",
   "devDependencies": {
+    "@types/node-fetch": "^2.5.10",
     "node-fetch": "^2.6.1",
     "playwright": "^1.12.3",
     "query-selector-shadow-dom": "^1.0.0",
