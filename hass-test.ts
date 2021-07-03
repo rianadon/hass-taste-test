@@ -4,7 +4,10 @@ import { tmpdir } from 'os'
 import { mkdtemp, writeFile, rm } from 'fs'
 import { promisify } from 'util'
 import fetch from 'node-fetch'
-import { createConnection } from 'net'
+import { createConnection as createTCPConnection } from 'net'
+import { Auth, Connection, createConnection as createHAConnection } from 'home-assistant-js-websocket'
+import { createSocket } from './socket'
+import { LovelaceDashboardCreateParams } from './homeassistant-types'
 
 interface HassTestOptions {
     python: string
@@ -40,6 +43,9 @@ export default class HassTestLauncher {
     private accessCode!: string
     private accessToken!: string
     private options: HassTestOptions
+    private dashboards = 0
+
+    public ws!: Connection
 
     constructor(private config: string, options?: Partial<HassTestOptions>) {
         this.venvDir = join(tmpdir(), 'hasstest-venv')
@@ -87,7 +93,7 @@ export default class HassTestLauncher {
 
     /** Checks if Home Assistant is listening on its TCP port */
     private isUp = () => new Promise(resolve => {
-        createConnection(this.options.port, this.options.host).on('connect', () => {
+        createTCPConnection(this.options.port, this.options.host).on('connect', () => {
             resolve(true)
         }).on("error", () => {
             setTimeout(() => resolve(false), 300)
@@ -103,7 +109,7 @@ export default class HassTestLauncher {
             password: this.options.password
         })
         this.accessCode = login.auth_code
-        this.accessToken = (await this.fetchToken(this.accessCode)).access_token
+        await this.launchWebsocket(this.accessCode)
 
         // Step through the onboarding pages
         await this.post('/api/onboarding/core_config', {}, true)
@@ -115,17 +121,20 @@ export default class HassTestLauncher {
     }
 
     get url() { return `http://${this.options.host}:${this.options.port}` }
-    get dashboard() {
+    get clientId() { return this.url + '/' }
+    get dashboard() { return this.customDashboard('') }
+
+    public customDashboard(name: string) {
         if (!this.accessCode) throw new Error("You haven't logged into Home Assistant yet. Have you called hasstest.start()?")
-        const state = Buffer.from(JSON.stringify({ hassUrl: this.url, clientId: this.url + '/' })).toString('base64')
-        return this.url + `/?auth_callback=1&code=${encodeURIComponent(this.accessCode)}&state=${encodeURIComponent(state)}`
+        const state = Buffer.from(JSON.stringify({ hassUrl: this.url, clientId: this.clientId })).toString('base64')
+        return this.url + '/' + name + `?auth_callback=1&code=${encodeURIComponent(this.accessCode)}&state=${encodeURIComponent(state)}`
     }
 
     async post(url: string, body: any, authorize=false) {
         const response = await fetch(this.url + url, {
             method: 'post',
             headers: {'Content-Type': 'application/json', ...(authorize ? {'Authorization': 'Bearer ' + this.accessToken } : undefined)},
-            body: JSON.stringify({ client_id: this.url + '/', ...body })
+            body: JSON.stringify({ client_id: this.clientId, ...body })
         })
         return await response.json()
     }
@@ -141,26 +150,69 @@ export default class HassTestLauncher {
             password: this.options.password
         })
         this.accessCode = response.result
-        console.log(this.accessCode, response)
-        this.accessToken = (await this.fetchToken(this.accessCode)).access_token
+        await this.launchWebsocket(this.accessCode)
     }
 
-    async fetchToken(code: string) {
+    async launchWebsocket(code: string) {
         const params = new URLSearchParams()
-        params.append('client_id', this.url + '/')
+        params.append('client_id', this.clientId)
         params.append('code', code)
         params.append('grant_type', 'authorization_code')
         const response = await fetch(this.url + '/auth/token', {
             method: 'post', body: params
         })
-        return await response.json()
+        const tokens = await response.json()
+        this.accessToken = tokens.access_token
+
+        const auth = new Auth({
+            ...tokens,
+            hassUrl: this.url,
+            clientId: this.clientId,
+        })
+
+        this.ws = await createHAConnection({ auth, createSocket: async () => createSocket(auth, false), })
+    }
+
+    async createDashboard(options?: Partial<LovelaceDashboardCreateParams>) {
+        if (!this.ws) throw new Error('Hass-test has not yet been initialized. Did you call hass.start()?')
+        const id = ++this.dashboards
+        const args = {
+            type: "lovelace/dashboards/create",
+            url_path: `lovelace-${id}`,
+            mode: 'storage',
+            require_admin: false,
+            show_in_sidebar: true,
+            title: `Dashboard ${id}`,
+            ...options
+        }
+        await this.ws.sendMessagePromise(args)
+        return args.url_path
+    }
+
+    async setDashboardView(dashboard_path: string, config: any) {
+        if (!this.ws) throw new Error('Hass-test has not yet been initialized. Did you call hass.start()?')
+        await this.ws.sendMessagePromise({
+            type:"lovelace/config/save",
+            url_path: dashboard_path,
+            config: {
+                title: "View",
+                views: [ {
+                    path:"default_view",
+                    title:"View",
+                    cards: config
+                } ]
+            }
+        })
     }
 
     /** Clean up connections and stop the HomeAssistant server */
     async close() {
-        this.process.kill('SIGINT')
-        await new Promise(resolve => this.process.on('exit', resolve))
-        await promisify(rm)(this.configDir, { recursive: true })
+        if (this.ws) this.ws.close()
+        if (this.process) {
+            this.process.kill('SIGINT')
+            await new Promise(resolve => this.process.on('exit', resolve))
+        }
+        if (this.configDir) await promisify(rm)(this.configDir, { recursive: true })
     }
 
 }

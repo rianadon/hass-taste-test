@@ -1,9 +1,10 @@
-import HassTest from './hass-test';
-import playwright from 'playwright';
+import HassTest from './hass-test'
+import playwright from 'playwright'
 
 // @ts-ignore
-import { selectorEngine } from "query-selector-shadow-dom/plugins/playwright";
+import { selectCards, shadowHTML } from './integrations/playwright'
 
+let browser: playwright.Browser
 const hass = new HassTest(`
 input_number:
   slider1:
@@ -12,23 +13,39 @@ input_number:
     min: -20
     max: 35
     step: 1
-`);
+`)
 
-(async () => {
-    await hass.start();
-    await playwright.selectors.register('shadow', selectorEngine);
+;(async () => {
+    await hass.start()
 
-    const browser = await playwright.firefox.launch({ headless: false, slowMo: 100 });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.goto(hass.dashboard);
+    browser = await playwright.firefox.launch({ headless: false }) //, slowMo: 100 })
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    console.log('new page')
 
-    const elementHandle = await page.waitForSelector('shadow=hui-input-number-entity-row');
-    await elementHandle!.screenshot({ path: 'example.png' });
+    page.on('console', msg => console.log(msg.text()))
 
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    const dashboard = await hass.createDashboard()
+    await hass.setDashboardView(dashboard, [
+        {type:"entities",entities:["binary_sensor.bedroom_occupancy","binary_sensor.theater_room_occupancy","binary_sensor.updater"],title:"Binary sensor"},
+        {type:"thermostat",entity:"climate.upstairs"},
+        {type:"entities",entities:["sensor.bedroom_temperature","sensor.theater_room_temperature","sensor.upstairs_humidity","sensor.upstairs_temperature"],title:"Sensor"}
+    ])
+    console.log('created dashboard')
 
-    await browser.close();
+    await page.goto(hass.customDashboard(dashboard))
+
+    try {
+        const cards = await selectCards(page)
+        console.log(cards)
+        const html = await shadowHTML(page, cards[0])
+        console.log(html)
+    } catch (e) {
+        console.log(e)
+        await new Promise(r => setTimeout(r, 500000))
+    }
+
+    await browser!.close()
 })().finally(() => {
-    return hass.close();
-});
+    return hass.close()
+})
