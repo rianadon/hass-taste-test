@@ -5,7 +5,7 @@ import { mkdtemp, writeFile, rm } from 'fs'
 import { promisify } from 'util'
 import fetch from 'node-fetch'
 import { createConnection as createTCPConnection } from 'net'
-import { Auth, Connection, createConnection as createHAConnection } from 'home-assistant-js-websocket'
+import { Auth, callService, Connection, createConnection as createHAConnection, HassServiceTarget } from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
 import { LovelaceDashboardCreateParams } from './types'
 import { BrowserIntegration, Page } from './types'
@@ -129,7 +129,7 @@ export default class HassTest {
     public customDashboard(name: string, code=this.accessCode) {
         if (!code) throw new Error("You haven't logged into Home Assistant yet. Have you called hasstest.start()?")
         const state = Buffer.from(JSON.stringify({ hassUrl: this.url, clientId: this.clientId })).toString('base64')
-        return this.url + '/' + name + `?auth_callback=1&code=${encodeURIComponent(this.accessCode)}&state=${encodeURIComponent(state)}`
+        return this.url + '/' + name + `?auth_callback=1&code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`
     }
 
     async post(url: string, body: any, authorize=false) {
@@ -212,6 +212,10 @@ export default class HassTest {
         })
     }
 
+    async callService(domain: string, service: string, serviceData?: object, target?: HassServiceTarget) {
+        return await callService(this.ws, domain, service, serviceData, target)
+    }
+
     async Dashboard(config: object[]) {
         if (!this.options.integration) throw new Error('Cannot launch a dashboard without a browser integration. Make sure to specify options.integration')
         const dashboard = await this.createDashboard()
@@ -254,4 +258,12 @@ export class HassCard {
         return this.page.shadowHTML(card);
     }
 
+}
+
+export function multiply(n: number, configFn: (i: number) => string) {
+    let config = '';
+    for (let i = 1; i <= n; i++) {
+        config += configFn(i) + '\n';
+    }
+    return config
 }
