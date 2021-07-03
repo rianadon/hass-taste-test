@@ -1,3 +1,17 @@
+export interface BrowserIntegration {
+    open(url: string): Promise<BrowserPage<unknown>>
+    close(): Promise<void>
+}
+
+export interface BrowserPage<E> {
+    getNthCard(n: number): Promise<E>
+    shadowHTML(element: E): Promise<string>
+}
+
+export type Page = BrowserPage<unknown>
+
+
+
 export interface LovelacePanelConfig {
   mode: "yaml" | "storage";
 }

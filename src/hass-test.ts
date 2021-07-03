@@ -7,7 +7,8 @@ import fetch from 'node-fetch'
 import { createConnection as createTCPConnection } from 'net'
 import { Auth, Connection, createConnection as createHAConnection } from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
-import { LovelaceDashboardCreateParams } from './homeassistant-types'
+import { LovelaceDashboardCreateParams } from './types'
+import { BrowserIntegration, Page } from './types'
 
 interface HassTestOptions {
     python: string
@@ -18,6 +19,7 @@ interface HassTestOptions {
     password: string
     userLanguage: string
     userDisplayName: string
+    integration?: BrowserIntegration
 }
 
 const DEFAULT_CONFIG = (options: HassTestOptions) => `
@@ -33,7 +35,7 @@ const exec = (command: string, args: string[]) => new Promise((resolve, reject) 
     proc.on('close', code => resolve(code))
 })
 
-export default class HassTestLauncher {
+export default class HassTest {
 
     private venvDir!: string
     private configDir!: string
@@ -124,8 +126,8 @@ export default class HassTestLauncher {
     get clientId() { return this.url + '/' }
     get dashboard() { return this.customDashboard('') }
 
-    public customDashboard(name: string) {
-        if (!this.accessCode) throw new Error("You haven't logged into Home Assistant yet. Have you called hasstest.start()?")
+    public customDashboard(name: string, code=this.accessCode) {
+        if (!code) throw new Error("You haven't logged into Home Assistant yet. Have you called hasstest.start()?")
         const state = Buffer.from(JSON.stringify({ hassUrl: this.url, clientId: this.clientId })).toString('base64')
         return this.url + '/' + name + `?auth_callback=1&code=${encodeURIComponent(this.accessCode)}&state=${encodeURIComponent(state)}`
     }
@@ -139,8 +141,8 @@ export default class HassTestLauncher {
         return await response.json()
     }
 
-    /** Fetch a short-lived access token from username and password */
-    async login() {
+    /** Fetch a access code from username and password */
+    async fetchLoginCode() {
         const login = await this.post('/auth/login_flow', {
             handler: ["homeassistant", null],
             redirect_uri: this.url + '/?auth_callback=1'
@@ -149,7 +151,12 @@ export default class HassTestLauncher {
             username: this.options.username,
             password: this.options.password
         })
-        this.accessCode = response.result
+        return response.result
+    }
+
+    /** Login and create tokens and websocket */
+    async login() {
+        this.accessCode = await this.fetchLoginCode()
         await this.launchWebsocket(this.accessCode)
     }
 
@@ -189,7 +196,7 @@ export default class HassTestLauncher {
         return args.url_path
     }
 
-    async setDashboardView(dashboard_path: string, config: any) {
+    async setDashboardView(dashboard_path: string, config: object[]) {
         if (!this.ws) throw new Error('Hass-test has not yet been initialized. Did you call hass.start()?')
         await this.ws.sendMessagePromise({
             type:"lovelace/config/save",
@@ -205,14 +212,46 @@ export default class HassTestLauncher {
         })
     }
 
+    async Dashboard(config: object[]) {
+        if (!this.options.integration) throw new Error('Cannot launch a dashboard without a browser integration. Make sure to specify options.integration')
+        const dashboard = await this.createDashboard()
+        await this.setDashboardView(dashboard, config)
+        const code = await this.fetchLoginCode()
+        const page = await this.options.integration.open(this.customDashboard(dashboard, code))
+        return new HassDashboard(this, config, page)
+    }
+
     /** Clean up connections and stop the HomeAssistant server */
     async close() {
+        if (this.options.integration) await this.options.integration.close()
         if (this.ws) this.ws.close()
         if (this.process) {
             this.process.kill('SIGINT')
             await new Promise(resolve => this.process.on('exit', resolve))
         }
         if (this.configDir) await promisify(rm)(this.configDir, { recursive: true })
+    }
+}
+
+export class HassDashboard {
+
+    public cards: HassCard[] = []
+
+    constructor (private parent: HassTest, config: object[], page: Page) {
+        for (let i = 0; i < config.length; i++) {
+            this.cards.push(new HassCard(i, page))
+        }
+    }
+
+}
+
+export class HassCard {
+
+    constructor (private n: number, private page: Page) {}
+
+    async html() {
+        const card = await this.page.getNthCard(this.n);
+        return this.page.shadowHTML(card);
     }
 
 }
