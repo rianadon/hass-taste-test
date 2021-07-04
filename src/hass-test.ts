@@ -1,12 +1,12 @@
 import { spawn, ChildProcess, execFile } from 'child_process'
 import { basename, join } from 'path'
 import { tmpdir } from 'os'
-import { mkdtemp, writeFile, rm, mkdir, copyFile, stat } from 'fs/promises'
+import { mkdtemp, writeFile, rm, mkdir, copyFile, stat, symlink } from 'fs/promises'
 import fetch from 'node-fetch'
 import { createConnection as createTCPConnection, createServer as createTCPServer } from 'net'
 import { Auth, callService, Connection, createConnection as createHAConnection, HassServiceTarget } from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
-import { BrowserPage, LovelaceDashboardCreateParams, LovelaceResourceType } from './types'
+import { BrowserPage, DiffOptions, LovelaceDashboardCreateParams, LovelaceResourceType } from './types'
 import { BrowserIntegration } from './types'
 import lockfile from 'proper-lockfile'
 import { promisify } from 'util'
@@ -20,6 +20,7 @@ interface HassTestOptions<E> {
     password: string
     userLanguage: string
     userDisplayName: string
+    customComponents: string[]
     integration?: BrowserIntegration<E>
 }
 
@@ -66,11 +67,13 @@ export default class HassTest<E> {
             password: 'dev',
             userLanguage: 'en',
             userDisplayName: 'Developer',
+            customComponents: [],
             ...options
         }
     }
 
     private get path_confFile() { return join(this.configDir, 'configuration.yaml') }
+    private get path_componentsDir() { return join(this.configDir, 'custom_components') }
     private get path_wwwDir() { return join(this.configDir, 'www') }
     private get path_hass() { return join(this.venvDir, 'bin/hass') }
     private get path_pip() { return join(this.venvDir, 'bin/pip') }
@@ -79,12 +82,14 @@ export default class HassTest<E> {
     public async start() {
         this.configDir = await mkdtemp(join(tmpdir(), 'hasstest-'))
 
+        await mkdir(this.path_wwwDir)
+        await mkdir(this.path_componentsDir)
+        await this.linkComponents()
+
         const releaseLock = await this.acquireLock()
-        await this.findPort()
-        await this.setupVenv()
+        await Promise.all([this.findPort(), this.setupVenv()])
 
         await writeFile(this.path_confFile , DEFAULT_CONFIG(this.options, this.chosenPort) + this.config)
-        await mkdir(this.path_wwwDir)
         this.process = spawn(this.path_hass, ['-c', this.configDir, ...this.options.hassArgs], {
             stdio: 'inherit'
         })
@@ -94,8 +99,15 @@ export default class HassTest<E> {
         await this.onboard()
     }
 
+    /** Symlink custom component directories to the configuration directory */
+    private async linkComponents() {
+        await Promise.all(this.options.customComponents.map(component =>
+            symlink(component, join(this.path_componentsDir, basename(component)), 'junction')
+        ))
+    }
+
     /** Wait for lockfile to become released. Forces HassTest instances to start up one at a time */
-    async acquireLock() {
+    private async acquireLock() {
         for (let iterations = 0; iterations < 50; iterations++)
             try {
                 return await lockfile.lock(tmpdir(), { lockfilePath: 'hasstest.lock' })
@@ -208,7 +220,7 @@ export default class HassTest<E> {
         await this.launchWebsocket(this.accessCode)
     }
 
-    async launchWebsocket(code: string) {
+    private async launchWebsocket(code: string) {
         const params = new URLSearchParams()
         params.append('client_id', this.clientId)
         params.append('code', code)
@@ -228,7 +240,16 @@ export default class HassTest<E> {
         this.ws = await createHAConnection({ auth, createSocket: async () => createSocket(auth, false), })
     }
 
-    async addResource(filename: string, resourceType: LovelaceResourceType) {
+    public async addIntegration(name: string) {
+        const response = await this.post('/api/config/config_entries/flow', {
+            handler: name,
+            show_advanced_options: false
+        }, true)
+        if (!response.result) throw new Error('Multi-step integration flows are not yet suppoted')
+        return response.result
+    }
+
+    public async addResource(filename: string, resourceType: LovelaceResourceType) {
         if (resourceType === 'module') {
             await copyFile(filename, join(this.path_wwwDir, basename(filename)))
         } else {
@@ -339,8 +360,8 @@ export class HassCard<E> {
         return new HassCard<E>(this.n, this.page, [...this.selectors, selector])
     }
 
-    public async html() {
-        return await this.page.shadowHTML(await this.element())
+    public async html(options?: DiffOptions) {
+        return await this.page.shadowHTML(await this.element(), options)
     }
 
     public async text() {

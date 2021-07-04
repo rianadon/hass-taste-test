@@ -1,6 +1,6 @@
 import { chromium, webkit, firefox, Browser, ElementHandle, Page, LaunchOptions } from "playwright"
 import { readFileSync } from 'fs'
-import { BrowserIntegration, BrowserPage } from "../types"
+import { BrowserIntegration, BrowserPage, DiffOptions } from "../types"
 
 const htmlScript = readFileSync(__dirname + '/../../lib/integrations/get-diffable-html.js', 'utf-8')
 
@@ -49,10 +49,10 @@ export class PlaywrightPage implements BrowserPage<Element> {
         return await this.page.waitForSelector(`.column>*:nth-child(${n+1})`)
     }
 
-    async shadowHTML(element: Element) {
+    async shadowHTML(element: Element, options?: DiffOptions) {
         if (!element) throw new Error('shadowHTML expects a non-null element')
-        const func = new Function('card', htmlScript + 'return getDiffableHTML(card)')
-        return await this.page.evaluate(func as any, element) as string
+        const func = new Function('args', htmlScript + 'return getDiffableHTML(args[0], args[1])')
+        return await this.page.evaluate(func as any, [element, options]) as string
     }
 
     async screenshot(element: Element) {

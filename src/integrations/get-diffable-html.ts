@@ -1,36 +1,18 @@
 // Based on @open-wc/semantic-dom-diff, MIT license
+// Changes are licensed under the repository license (see LICENSE.md)
 //
 // The code has been modified to traverse shadow DOM & find Lit and Polymer attributes
 
+import { DiffOptions } from '../types'
+
 const DEFAULT_IGNORE_TAGS = ['script', 'style'];
-const DEFAULT_IGNORE_CHILDREN = [
+const DEFAULT_IGNORE_SHADOW_CHILDREN = [
   'ha-icon', 'ha-slider', // Home Assistant elements
+  'mwc-button', // Material web components
   'paper-input', // Polymer elements
 ];
 const DEFAULT_EMPTY_ATTRS = ['class', 'id'];
 const VOID_ELEMENTS = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'menuitem', 'meta', 'param', 'source', 'track', 'wbr'];
-
-interface IgnoreAttributesForTags {
-  /** tags on which to ignore the given attributes */
-  tags: string[]
-  /** attributes to ignore for the given tags */
-  attributes: string[]
-}
-
-interface DiffOptions {
-  /** array of attributes to ignore, when given a string that attribute will be ignored on all tags
-   *  when given an object of type `IgnoreAttributesForTags`, you can specify on which tags to ignore which attributes */
-  ignoreAttributes: (string | IgnoreAttributesForTags)[]
-  /** array of tags to ignore, these tags are stripped from the output */
-  ignoreTags: string[]
-  /** array of tags whose children to ignore, the children of these tags are stripped from the output */
-  ignoreChildren: string[]
-  /** array of attributes which should be removed when empty.
-   * Be careful not to add any boolean attributes here (e.g. `hidden`) unless you know what you're doing */
-  stripEmptyAttributes: string[]
-  /** whether to strip attributes from Lit & Polymer with undefined values */
-  stripUndefinedAttributes: boolean
-}
 
 /**
  * Restructures given HTML string, returning it in a format which can be used for comparison:
@@ -62,7 +44,8 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
     ? options.ignoreAttributes.filter(e => typeof e !== 'string') as IgnoreAttributesForTags[]
     : [];
   const ignoreTags = [...(options?.ignoreTags || []), ...DEFAULT_IGNORE_TAGS];
-  const ignoreChildren = [...(options?.ignoreChildren || []), ...DEFAULT_IGNORE_CHILDREN];
+  const ignoreChildren = options?.ignoreChildren || []
+  const ignoreShadowChildren = [...(options?.ignoreShadowChildren || []), ...DEFAULT_IGNORE_SHADOW_CHILDREN];
   const stripEmptyAttributes = options?.stripEmptyAttributes || DEFAULT_EMPTY_ATTRS;
   const stripUndefinedAttributes = options?.stripUndefinedAttributes ?? true;
   const escapeAttributes = /(&|")/g;
@@ -93,10 +76,14 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
     }
 
     function children(node: Node) {
-      if (ignoreChildren.includes(getTagName(node))) return [];
+      const tag = getTagName(node)
+      let children: Node[] = [];
+      if (!ignoreChildren.includes(tag))
+        children = [...node.childNodes]
 
-      let children = [...node.childNodes];
-      if (node instanceof Element && node.shadowRoot) children = [...node.shadowRoot.childNodes, ...children];
+      if (!ignoreShadowChildren.includes(tag) && node instanceof Element && node.shadowRoot)
+        children = [...node.shadowRoot.childNodes, ...children];
+
       return children.filter(node => node.nodeType == Node.ELEMENT_NODE || node.nodeType == Node.TEXT_NODE)
     }
 
@@ -168,7 +155,7 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
       const tag = getTagName(el)
       text += `${getIndentation()}<${tag}${getAttributesString(el)}>`;
       if (children(el).length > 0 || VOID_ELEMENTS.includes(tag)) text += '\n';
-      if (ignoreChildren.includes(tag)) text += '…';
+      else if (ignoreChildren.includes(tag) || ignoreShadowChildren.includes(tag)) text += '…';
     }
 
     function onNodeStart(node: Node) {
