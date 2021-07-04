@@ -75,10 +75,9 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
 
         const closeOrError = (errorText?: string) => {
             if (errorText) {
-                if (DEBUG)
-                    console.log(
-                        `WebSocket Connection to Home Assistant closed with an error: ${errorText}`
-                    )
+                console.error(
+                    `WebSocket Connection to Home Assistant closed with an error: ${errorText}`
+                )
             }
             if (invalidAuth) {
                 promReject(ERR_INVALID_AUTH)
@@ -103,12 +102,7 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
                 if (auth.expired) {
                     await auth.refreshAccessToken()
                 }
-                socket.send(
-                    JSON.stringify({
-                        type: 'auth',
-                        access_token: auth.accessToken,
-                    })
-                )
+                socket.send(JSON.stringify({ type: 'auth', access_token: auth.accessToken }))
             } catch (err) {
                 // Refresh token failed
                 invalidAuth = err === ERR_INVALID_AUTH

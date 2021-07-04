@@ -4,7 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "test": "jest && ava"
+        "test": "jest && ava",
+        "prepare": "husky install"
     },
     "author": "",
     "license": "AGPL-3.0-or-later",
@@ -20,8 +21,10 @@
         "@types/proper-lockfile": "^4.1.1",
         "@types/ws": "^7.4.5",
         "ava": "^3.15.0",
+        "husky": "^7.0.0",
         "jest": "^27.0.6",
         "jest-image-snapshot": "^4.5.1",
+        "lint-staged": "^11.0.0",
         "playwright": "^1.12.3",
         "prettier": "^2.3.2",
         "ts-jest": "^27.0.3",
@@ -52,5 +55,8 @@
         "testMatch": [
             "**/*.jest.ts"
         ]
+    },
+    "lint-staged": {
+        "*.{js,css,md}": "prettier --write"
     }
 }

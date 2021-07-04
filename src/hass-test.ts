@@ -131,9 +131,7 @@ export default class HassTest<E> {
     private async acquireLock() {
         for (let iterations = 0; iterations < 50; iterations++)
             try {
-                return await lockfile.lock(tmpdir(), {
-                    lockfilePath: 'hasstest.lock',
-                })
+                return await lockfile.lock(tmpdir(), { lockfilePath: 'hasstest.lock' })
             } catch (e) {
                 if (e.code !== 'ELOCKED') throw e
                 await new Promise((resolve) => setTimeout(resolve, 100))
@@ -180,12 +178,8 @@ export default class HassTest<E> {
     private isUp = () =>
         new Promise((resolve) => {
             net.createConnection(this.chosenPort, this.options.host)
-                .on('connect', () => {
-                    resolve(true)
-                })
-                .on('error', () => {
-                    setTimeout(() => resolve(false), 300)
-                })
+                .on('connect', () => resolve(true))
+                .on('error', () => setTimeout(() => resolve(false), 300))
         })
 
     /** Complete onboarding and fetch short-lived access token */
@@ -223,7 +217,7 @@ export default class HassTest<E> {
     public customDashboard(name: string, code = this.accessCode) {
         if (!code)
             throw new Error(
-                "You haven't logged into Home Assistant yet. Have you called hasstest.start()?"
+                'You have not logged into Home Assistant yet. Have you called hasstest.start()?'
             )
         const state = Buffer.from(
             JSON.stringify({ hassUrl: this.url, clientId: this.clientId })
@@ -339,13 +333,7 @@ export default class HassTest<E> {
             url_path: dashboard_path,
             config: {
                 title: 'View',
-                views: [
-                    {
-                        path: 'default_view',
-                        title: 'View',
-                        cards: config,
-                    },
-                ],
+                views: [{ path: 'default_view', title: 'View', cards: config }],
             },
         })
     }
