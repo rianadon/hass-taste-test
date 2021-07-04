@@ -124,16 +124,11 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
             let children: Node[] = []
             if (!ignoreChildren.includes(tag)) children = [...node.childNodes]
 
-            if (
-                !ignoreShadowChildren.includes(tag) &&
-                node instanceof Element &&
-                node.shadowRoot
-            )
+            if (!ignoreShadowChildren.includes(tag) && node instanceof Element && node.shadowRoot)
                 children = [...node.shadowRoot.childNodes, ...children]
 
             return children.filter(
-                (node) =>
-                    node.nodeType == Node.ELEMENT_NODE || node.nodeType == Node.TEXT_NODE
+                (node) => node.nodeType == Node.ELEMENT_NODE || node.nodeType == Node.TEXT_NODE
             )
         }
 
@@ -176,9 +171,7 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
             let ignoreAttributeNames: string[] = [] // Redundant HTML element properties
             let propertyNames = [] // Names of properties defined by Lit/Polymer
             if (el.properties) {
-                propertyNames = Object.keys(el.properties).filter(
-                    (p) => !el.properties[p].readOnly
-                )
+                propertyNames = Object.keys(el.properties).filter((p) => !el.properties[p].readOnly)
                 ignoreAttributeNames = propertyNames
             } else if (el.constructor.elementProperties) {
                 const props = el.constructor.elementProperties
@@ -196,9 +189,7 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
                 propertyNames = propertyNames.filter((p) => typeof el[p] !== 'undefined')
             return [
                 ...attributes.filter(({ name }) => !ignoreAttributeNames.includes(name)),
-                ...propertyNames.map(
-                    (name) => ({ name, value: String(el[name]) } as Attr)
-                ),
+                ...propertyNames.map((name) => ({ name, value: String(el[name]) } as Attr)),
             ]
         }
 
@@ -214,8 +205,7 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
             const tag = getTagName(el)
             text += `${getIndentation()}<${tag}${getAttributesString(el)}>`
             if (children(el).length > 0 || VOID_ELEMENTS.includes(tag)) text += '\n'
-            else if (ignoreChildren.includes(tag) || ignoreShadowChildren.includes(tag))
-                text += '…'
+            else if (ignoreChildren.includes(tag) || ignoreShadowChildren.includes(tag)) text += '…'
         }
 
         function onNodeStart(node: Node) {

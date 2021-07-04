@@ -1,19 +1,8 @@
-import {
-    chromium,
-    webkit,
-    firefox,
-    Browser,
-    ElementHandle,
-    Page,
-    LaunchOptions,
-} from 'playwright'
+import { chromium, webkit, firefox, Browser, ElementHandle, Page, LaunchOptions } from 'playwright'
 import { readFileSync } from 'fs'
 import { BrowserIntegration, BrowserPage, DiffOptions } from '../types'
 
-const htmlScript = readFileSync(
-    __dirname + '/../../lib/integrations/get-diffable-html.js',
-    'utf-8'
-)
+const htmlScript = readFileSync(__dirname + '/../../lib/integrations/get-diffable-html.js', 'utf-8')
 
 export type Element = ElementHandle<Node>
 
@@ -23,11 +12,7 @@ export default class PlaywrightIntegration implements BrowserIntegration<Element
     private browserPromise: Promise<Browser>
 
     constructor(browserName: string, options?: LaunchOptions) {
-        if (
-            browserName !== 'chromium' &&
-            browserName !== 'webkit' &&
-            browserName !== 'firefox'
-        )
+        if (browserName !== 'chromium' && browserName !== 'webkit' && browserName !== 'firefox')
             throw new Error(
                 `Browser name ${browserName} must be one of chromium, webkit, or firefox`
             )
@@ -66,10 +51,7 @@ export class PlaywrightPage implements BrowserPage<Element> {
 
     async shadowHTML(element: Element, options?: DiffOptions) {
         if (!element) throw new Error('shadowHTML expects a non-null element')
-        const func = new Function(
-            'args',
-            htmlScript + 'return getDiffableHTML(args[0], args[1])'
-        )
+        const func = new Function('args', htmlScript + 'return getDiffableHTML(args[0], args[1])')
         return (await this.page.evaluate(func as any, [element, options])) as string
     }
 

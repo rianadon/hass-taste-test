@@ -3,17 +3,8 @@ import { basename, join } from 'path'
 import { tmpdir } from 'os'
 import { mkdtemp, writeFile, rm, mkdir, copyFile, stat, symlink } from 'fs/promises'
 import fetch from 'node-fetch'
-import {
-    createConnection as createTCPConnection,
-    createServer as createTCPServer,
-} from 'net'
-import {
-    Auth,
-    callService,
-    Connection,
-    createConnection as createHAConnection,
-    HassServiceTarget,
-} from 'home-assistant-js-websocket'
+import net from 'net'
+import hass from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
 import {
     BrowserPage,
@@ -68,7 +59,7 @@ export default class HassTest<E> {
     private options: HassTestOptions<E>
     private dashboards = 0
 
-    public ws!: Connection
+    public ws!: hass.Connection
 
     constructor(private config: string, options?: Partial<HassTestOptions<E>>) {
         this.venvDir = join(tmpdir(), 'hasstest-venv')
@@ -113,17 +104,14 @@ export default class HassTest<E> {
         const releaseLock = await this.acquireLock()
         await Promise.all([this.findPort(), this.setupVenv()])
 
-        await writeFile(
-            this.path_confFile,
-            DEFAULT_CONFIG(this.options, this.chosenPort) + this.config
-        )
-        this.process = spawn(
-            this.path_hass,
-            ['-c', this.configDir, ...this.options.hassArgs],
-            { stdio: 'inherit' }
-        )
+        const config = DEFAULT_CONFIG(this.options, this.chosenPort) + this.config
+        await writeFile(this.path_confFile, config)
+
+        this.process = spawn(this.path_hass, ['-c', this.configDir, ...this.options.hassArgs], {
+            stdio: 'inherit',
+        })
         while (!(await this.isUp())) {
-            /* wait */
+            // wait
         }
         await releaseLock() // Release lock once the process is up, so other instances can select a different port
 
@@ -134,11 +122,7 @@ export default class HassTest<E> {
     private async linkComponents() {
         await Promise.all(
             this.options.customComponents.map((component) =>
-                symlink(
-                    component,
-                    join(this.path_componentsDir, basename(component)),
-                    'junction'
-                )
+                symlink(component, join(this.path_componentsDir, basename(component)), 'junction')
             )
         )
     }
@@ -161,7 +145,7 @@ export default class HassTest<E> {
     /** Find an open port to launch Home Assistant */
     private async findPort() {
         this.chosenPort = startPort++
-        const server = createTCPServer()
+        const server = net.createServer()
         server.listen(this.chosenPort, this.options.host)
         const success = await new Promise((resolve, reject) => {
             server.on('error', (e: NodeJS.ErrnoException) => {
@@ -183,9 +167,7 @@ export default class HassTest<E> {
             await exec(this.options.python, ['-m', 'venv', this.venvDir])
 
         // Check if homeassistant needs an upgrade; saves a bit of time if it doesn't need one
-        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then((r) =>
-            r.json()
-        )
+        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then((r) => r.json())
         const { stdout } = await promisify(execFile)(this.path_pip, ['freeze'])
         const installed = stdout.split('\n').find((v) => v.startsWith('homeassistant=='))
 
@@ -197,7 +179,7 @@ export default class HassTest<E> {
     /** Checks if Home Assistant is listening on its TCP port */
     private isUp = () =>
         new Promise((resolve) => {
-            createTCPConnection(this.chosenPort, this.options.host)
+            net.createConnection(this.chosenPort, this.options.host)
                 .on('connect', () => {
                     resolve(true)
                 })
@@ -256,9 +238,7 @@ export default class HassTest<E> {
             method: 'post',
             headers: {
                 'Content-Type': 'application/json',
-                ...(authorize
-                    ? { Authorization: 'Bearer ' + this.accessToken }
-                    : undefined),
+                ...(authorize ? { Authorization: 'Bearer ' + this.accessToken } : undefined),
             },
             body: JSON.stringify({ client_id: this.clientId, ...body }),
         })
@@ -296,13 +276,13 @@ export default class HassTest<E> {
         const tokens = await response.json()
         this.accessToken = tokens.access_token
 
-        const auth = new Auth({
+        const auth = new hass.Auth({
             ...tokens,
             hassUrl: this.url,
             clientId: this.clientId,
         })
 
-        this.ws = await createHAConnection({
+        this.ws = await hass.createConnection({
             auth,
             createSocket: async () => createSocket(auth, false),
         })
@@ -317,8 +297,7 @@ export default class HassTest<E> {
             },
             true
         )
-        if (!response.result)
-            throw new Error('Multi-step integration flows are not yet suppoted')
+        if (!response.result) throw new Error('Multi-step integration flows are not yet suppoted')
         return response.result
     }
 
@@ -337,9 +316,7 @@ export default class HassTest<E> {
 
     async createDashboard(options?: Partial<LovelaceDashboardCreateParams>) {
         if (!this.ws)
-            throw new Error(
-                'Hass-test has not yet been initialized. Did you call hass.start()?'
-            )
+            throw new Error('Hass-test has not yet been initialized. Did you call hass.start()?')
         const id = ++this.dashboards
         const args = {
             type: 'lovelace/dashboards/create',
@@ -356,9 +333,7 @@ export default class HassTest<E> {
 
     async setDashboardView(dashboard_path: string, config: object[]) {
         if (!this.ws)
-            throw new Error(
-                'Hass-test has not yet been initialized. Did you call hass.start()?'
-            )
+            throw new Error('Hass-test has not yet been initialized. Did you call hass.start()?')
         await this.ws.sendMessagePromise({
             type: 'lovelace/config/save',
             url_path: dashboard_path,
@@ -379,9 +354,9 @@ export default class HassTest<E> {
         domain: string,
         service: string,
         serviceData?: object,
-        target?: HassServiceTarget
+        target?: hass.HassServiceTarget
     ) {
-        return await callService(this.ws, domain, service, serviceData, target)
+        return await hass.callService(this.ws, domain, service, serviceData, target)
     }
 
     async Dashboard(config: object[]) {
@@ -392,9 +367,7 @@ export default class HassTest<E> {
         const dashboard = await this.createDashboard()
         await this.setDashboardView(dashboard, config)
         const code = await this.fetchLoginCode()
-        const page = await this.options.integration.open(
-            this.customDashboard(dashboard, code)
-        )
+        const page = await this.options.integration.open(this.customDashboard(dashboard, code))
         return new this.HassDashboard(this, dashboard, config, page)
     }
 

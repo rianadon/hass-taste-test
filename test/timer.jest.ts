@@ -24,9 +24,7 @@ beforeAll(async () => {
 afterAll(async () => await hass.close())
 
 it('Timer element', async () => {
-    const dashboard = await hass.Dashboard([
-        { type: 'entities', entities: ['timer.basic'] },
-    ])
+    const dashboard = await hass.Dashboard([{ type: 'entities', entities: ['timer.basic'] }])
 
     const row = dashboard.cards[0].narrow('hui-timer-entity-row')
     expect(await row.html()).toMatchSnapshot()
@@ -34,9 +32,7 @@ it('Timer element', async () => {
 })
 
 it('Timer states', async () => {
-    const dashboard = await hass.Dashboard([
-        { type: 'entities', entities: ['timer.laundry'] },
-    ])
+    const dashboard = await hass.Dashboard([{ type: 'entities', entities: ['timer.laundry'] }])
     // This is merely a reference to the element, so it can be reused
     const entityRow = dashboard.cards[0].narrow('.text-content')
     expect(await entityRow.text()).toMatchInlineSnapshot(`"Idle"`)

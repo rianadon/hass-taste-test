@@ -25,11 +25,7 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
     // Convert from http:// -> ws://, https:// -> wss://
     const url = auth.wsUrl
 
-    if (DEBUG)
-        console.log(
-            '[Auth phase] Initializing WebSocket connection to Home Assistant',
-            url
-        )
+    if (DEBUG) console.log('[Auth phase] Initializing WebSocket connection to Home Assistant', url)
 
     function connect(
         triesLeft: number,
@@ -124,10 +120,7 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
             const message = JSON.parse(event.data)
 
             if (DEBUG)
-                console.log(
-                    `[Auth phase] Received a message of type ${message.type}`,
-                    message
-                )
+                console.log(`[Auth phase] Received a message of type ${message.type}`, message)
 
             switch (message.type) {
                 case MSG_TYPE_AUTH_INVALID:

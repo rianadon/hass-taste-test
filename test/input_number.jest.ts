@@ -50,9 +50,7 @@ it('input_number slider', async () => {
 })
 
 it('input_number box', async () => {
-    const dashboard = await hass.Dashboard([
-        { type: 'entities', entities: ['input_number.box1'] },
-    ])
+    const dashboard = await hass.Dashboard([{ type: 'entities', entities: ['input_number.box1'] }])
     expect(await dashboard.cards[0].html()).toMatchSnapshot()
     await hass.callService(
         'input_number',

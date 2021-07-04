@@ -42,11 +42,6 @@ test('Timer states', async (t) => {
     await t.context.hass.callService('timer', 'pause', {}, { entity_id: 'timer.laundry' })
     t.snapshot(await entityRow.text(), 'Paused state')
 
-    await t.context.hass.callService(
-        'timer',
-        'cancel',
-        {},
-        { entity_id: 'timer.laundry' }
-    )
+    await t.context.hass.callService('timer', 'cancel', {}, { entity_id: 'timer.laundry' })
     t.snapshot(await entityRow.text(), 'Idle state')
 })
