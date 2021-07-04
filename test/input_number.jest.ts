@@ -1,6 +1,8 @@
-import HassTest, { multiply } from '../src/hass-test'
+import HassTest from '../src/hass-test'
 import PlaywrightIntegration, { Element } from '../src/integrations/playwright'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
+
+expect.extend({ toMatchImageSnapshot });
 
 const CONFIGURATION_YAML = `
 input_number:
@@ -21,14 +23,12 @@ input_number:
 
 let hass: HassTest<Element>;
 
-expect.extend({ toMatchImageSnapshot });
-
 beforeAll(async () => {
     hass = new HassTest(CONFIGURATION_YAML, {
         integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox')
     })
     await hass.start()
-})
+}, 10000)
 
 afterAll(async () => await hass.close())
 

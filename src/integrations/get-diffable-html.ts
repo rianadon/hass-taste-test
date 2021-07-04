@@ -165,9 +165,10 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
     }
 
     function printOpenElement(el: Element) {
-      text += `${getIndentation()}<${getTagName(el)}${getAttributesString(el)}>`;
-      if (children(el).length > 0) text += '\n';
-      if (ignoreChildren.includes(getTagName(el))) text += '…';
+      const tag = getTagName(el)
+      text += `${getIndentation()}<${tag}${getAttributesString(el)}>`;
+      if (children(el).length > 0 || VOID_ELEMENTS.includes(tag)) text += '\n';
+      if (ignoreChildren.includes(tag)) text += '…';
     }
 
     function onNodeStart(node: Node) {

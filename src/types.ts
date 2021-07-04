@@ -14,7 +14,7 @@ export interface BrowserPage<E> {
 
 export type Page = BrowserPage<unknown>
 
-
+export type LovelaceResourceType = "css" | "js" | "module" | "html"
 
 export interface LovelacePanelConfig {
   mode: "yaml" | "storage";

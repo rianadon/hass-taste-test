@@ -32,7 +32,7 @@ export default class PlaywrightIntegration implements BrowserIntegration<Element
         })
         const page = await browser.newPage()
         await page.goto(url)
-        await page.waitForEvent('close')
+        await page.waitForEvent('close', { timeout: 0 })
     }
 
     async close() {

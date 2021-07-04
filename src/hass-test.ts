@@ -1,12 +1,12 @@
 import { spawn, ChildProcess, execFile } from 'child_process'
-import { join } from 'path'
+import { basename, join } from 'path'
 import { tmpdir } from 'os'
-import { mkdtemp, writeFile, rm, stat } from 'fs/promises'
+import { mkdtemp, writeFile, rm, mkdir, copyFile, stat } from 'fs/promises'
 import fetch from 'node-fetch'
 import { createConnection as createTCPConnection, createServer as createTCPServer } from 'net'
 import { Auth, callService, Connection, createConnection as createHAConnection, HassServiceTarget } from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
-import { BrowserPage, LovelaceDashboardCreateParams } from './types'
+import { BrowserPage, LovelaceDashboardCreateParams, LovelaceResourceType } from './types'
 import { BrowserIntegration } from './types'
 import lockfile from 'proper-lockfile'
 import { promisify } from 'util'
@@ -45,7 +45,6 @@ export default class HassTest<E> {
 
     private venvDir!: string
     private configDir!: string
-    private configFile!: string
 
     private chosenPort!: number
     private process!: ChildProcess
@@ -71,20 +70,24 @@ export default class HassTest<E> {
         }
     }
 
+    private get path_confFile() { return join(this.configDir, 'configuration.yaml') }
+    private get path_wwwDir() { return join(this.configDir, 'www') }
+    private get path_hass() { return join(this.venvDir, 'bin/hass') }
+    private get path_pip() { return join(this.venvDir, 'bin/pip') }
+
     /** Start the HomeAssistant server and connect to its websocket */
     public async start() {
         this.configDir = await mkdtemp(join(tmpdir(), 'hasstest-'))
-        this.configFile = join(this.configDir, 'configuration.yaml')
 
         const releaseLock = await this.acquireLock()
         await this.findPort()
         await this.setupVenv()
 
-        await writeFile(this.configFile, DEFAULT_CONFIG(this.options, this.chosenPort) + this.config)
-        this.process = spawn(join(this.venvDir, 'bin/hass'), ['-c', this.configDir, ...this.options.hassArgs], {
+        await writeFile(this.path_confFile , DEFAULT_CONFIG(this.options, this.chosenPort) + this.config)
+        await mkdir(this.path_wwwDir)
+        this.process = spawn(this.path_hass, ['-c', this.configDir, ...this.options.hassArgs], {
             stdio: 'inherit'
         })
-
         while (!(await this.isUp())) { /* wait */ }
         await releaseLock() // Release lock once the process is up, so other instances can select a different port
 
@@ -124,15 +127,17 @@ export default class HassTest<E> {
 
     /** Creates a python virtual environment and installs Home Assistant */
     private async setupVenv() {
-        await exec(this.options.python, ['-m', 'venv', this.venvDir])
+        // Create virtual environment if it does not already exist
+        if (!(await stat(this.venvDir)).isDirectory())
+            await exec(this.options.python, ['-m', 'venv', this.venvDir])
 
         // Check if homeassistant needs an upgrade; saves a bit of time if it doesn't need one
         const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then(r => r.json())
-        const { stdout } = await promisify(execFile)(join(this.venvDir, 'bin/pip'), ['freeze'])
+        const { stdout } = await promisify(execFile)(this.path_pip, ['freeze'])
         const installed = stdout.split('\n').find(v => v.startsWith('homeassistant=='))
 
         if (!installed || installed.split('==')[1] !== latest.info.version) {
-            await exec(join(this.venvDir, 'bin/pip'), ['install', '--upgrade', 'homeassistant'])
+            await exec(this.path_pip, ['install', '--upgrade', 'homeassistant'])
         }
     }
 
@@ -167,7 +172,7 @@ export default class HassTest<E> {
 
     get url() { return `http://${this.options.host}:${this.chosenPort}` }
     get clientId() { return this.url + '/' }
-    get dashboard() { return this.customDashboard('') }
+    get link() { return this.customDashboard('') }
 
     public customDashboard(name: string, code=this.accessCode) {
         if (!code) throw new Error("You haven't logged into Home Assistant yet. Have you called hasstest.start()?")
@@ -221,6 +226,19 @@ export default class HassTest<E> {
         })
 
         this.ws = await createHAConnection({ auth, createSocket: async () => createSocket(auth, false), })
+    }
+
+    async addResource(filename: string, resourceType: LovelaceResourceType) {
+        if (resourceType === 'module') {
+            await copyFile(filename, join(this.path_wwwDir, basename(filename)))
+        } else {
+            throw new Error('Only the module type is supported for now')
+        }
+        await this.ws.sendMessagePromise({
+            type: "lovelace/resources/create",
+            res_type: resourceType,
+            url: '/local/' + basename(filename)
+        })
     }
 
     async createDashboard(options?: Partial<LovelaceDashboardCreateParams>) {
@@ -289,10 +307,13 @@ export default class HassTest<E> {
             }
         }
 
-        async openInBrowser() {
+        async link() {
             const code = await this.parent.fetchLoginCode()
-            const url = this.parent.customDashboard(this.name, code)
-            await this.parent.options.integration!.openInHeaded(url)
+            return this.parent.customDashboard(this.name, code)
+        }
+
+        async openInBrowser() {
+            await this.parent.options.integration!.openInHeaded(await this.link())
         }
     }
 }
