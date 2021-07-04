@@ -1,10 +1,10 @@
-import { spawn, ChildProcess, execFile } from 'child_process'
+import { spawn, ChildProcess } from 'child_process'
 import { basename, join } from 'path'
 import { tmpdir } from 'os'
-import { mkdtemp, writeFile, rm, mkdir, copyFile, stat, symlink } from 'fs/promises'
 import fetch from 'node-fetch'
-import net from 'net'
-import hass from 'home-assistant-js-websocket'
+import * as fs from 'fs/promises'
+import * as net from 'net'
+import * as hass from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
 import {
     BrowserPage,
@@ -14,7 +14,6 @@ import {
 } from './types'
 import { BrowserIntegration } from './types'
 import lockfile from 'proper-lockfile'
-import { promisify } from 'util'
 
 interface HassTestOptions<E> {
     python: string
@@ -29,17 +28,13 @@ interface HassTestOptions<E> {
     integration?: BrowserIntegration<E>
 }
 
-const DEFAULT_CONFIG = (options: HassTestOptions<any>, port: number) => `
-frontend:
-http:
-  server_host: ${options.host}
-  server_port: ${port}
-`
+interface CacheConf {
+    latestHass: string
+    startPort: number
+}
 
-// Global port to start search from
-// When multiple HassTest instances are created, they will all increment this port
-// Hopefully this stops them from colliding with one another
-let startPort = 8130
+/** Sleeps for 100 ms */
+const sleep = () => new Promise((r) => setTimeout(r, 100))
 
 const exec = (command: string, args: string[]) =>
     new Promise((resolve, reject) => {
@@ -52,6 +47,7 @@ export default class HassTest<E> {
     private venvDir!: string
     private configDir!: string
 
+    private cache!: CacheConf
     private chosenPort!: number
     private process!: ChildProcess
     private accessCode!: string
@@ -77,64 +73,74 @@ export default class HassTest<E> {
         }
     }
 
-    private get path_confFile() {
-        return join(this.configDir, 'configuration.yaml')
-    }
-    private get path_componentsDir() {
-        return join(this.configDir, 'custom_components')
-    }
-    private get path_wwwDir() {
-        return join(this.configDir, 'www')
-    }
-    private get path_hass() {
-        return join(this.venvDir, 'bin/hass')
-    }
-    private get path_pip() {
-        return join(this.venvDir, 'bin/pip')
-    }
+    private path_confFile = () => join(this.configDir, 'configuration.yaml')
+    private path_componentsDir = () => join(this.configDir, 'custom_components')
+    private path_wwwDir = () => join(this.configDir, 'www')
+    private path_hass = () => join(this.venvDir, 'bin/hass')
+    private path_pip = () => join(this.venvDir, 'bin/pip')
+    private path_cache = () => join(tmpdir(), 'hasstest-cache')
 
     /** Start the HomeAssistant server and connect to its websocket */
     public async start() {
-        this.configDir = await mkdtemp(join(tmpdir(), 'hasstest-'))
+        this.configDir = await fs.mkdtemp(join(tmpdir(), 'hasstest-'))
 
-        await mkdir(this.path_wwwDir)
-        await mkdir(this.path_componentsDir)
-        await this.linkComponents()
+        // Step 1: Create necessary directories
+        await Promise.all([
+            fs.mkdir(this.path_wwwDir()),
+            fs.mkdir(this.path_componentsDir()).then(() => this.linkComponents()),
+        ])
 
+        // Step 2: Create venv and sort out networking under lock
         const releaseLock = await this.acquireLock()
-        await Promise.all([this.findPort(), this.setupVenv()])
+        await this.readCache()
+        await Promise.all([
+            this.findPort().then(() => this.writeYAMLConfiguration()),
+            this.setupVenv(),
+            fs.writeFile(this.path_cache(), JSON.stringify(this.cache)),
+        ])
+        await releaseLock()
 
-        const config = DEFAULT_CONFIG(this.options, this.chosenPort) + this.config
-        await writeFile(this.path_confFile, config)
-
-        this.process = spawn(this.path_hass, ['-c', this.configDir, ...this.options.hassArgs], {
+        // Step 3: Start Home Assistant and onboard
+        this.process = spawn(this.path_hass(), ['-c', this.configDir, ...this.options.hassArgs], {
             stdio: 'inherit',
         })
-        while (!(await this.isUp())) {
-            // wait
-        }
-        await releaseLock() // Release lock once the process is up, so other instances can select a different port
-
+        while (!(await this.isUp())) await sleep()
         await this.onboard()
+    }
+
+    /** Write configuration.yaml */
+    private async writeYAMLConfiguration() {
+        const config = [
+            'frontend:',
+            'http:',
+            `  server_host: ${this.options.host}`,
+            `  server_port: ${this.chosenPort}`,
+            this.config,
+        ].join('\n')
+        fs.writeFile(this.path_confFile(), config)
     }
 
     /** Symlink custom component directories to the configuration directory */
     private async linkComponents() {
         await Promise.all(
             this.options.customComponents.map((component) =>
-                symlink(component, join(this.path_componentsDir, basename(component)), 'junction')
+                fs.symlink(
+                    component,
+                    join(this.path_componentsDir(), basename(component)),
+                    'junction'
+                )
             )
         )
     }
 
     /** Wait for lockfile to become released. Forces HassTest instances to start up one at a time */
     private async acquireLock() {
-        for (let iterations = 0; iterations < 50; iterations++)
+        for (let iterations = 0; iterations < 600; iterations++)
             try {
                 return await lockfile.lock(tmpdir(), { lockfilePath: 'hasstest.lock' })
             } catch (e) {
                 if (e.code !== 'ELOCKED') throw e
-                await new Promise((resolve) => setTimeout(resolve, 100))
+                await sleep()
             }
 
         throw new Error('Timed out waiting for lockfile')
@@ -142,7 +148,7 @@ export default class HassTest<E> {
 
     /** Find an open port to launch Home Assistant */
     private async findPort() {
-        this.chosenPort = startPort++
+        this.chosenPort = this.cache.startPort++
         const server = net.createServer()
         server.listen(this.chosenPort, this.options.host)
         const success = await new Promise((resolve, reject) => {
@@ -161,17 +167,49 @@ export default class HassTest<E> {
     /** Creates a python virtual environment and installs Home Assistant */
     private async setupVenv() {
         // Create virtual environment if it does not already exist
-        if (!(await stat(this.venvDir)).isDirectory())
-            await exec(this.options.python, ['-m', 'venv', this.venvDir])
+        await fs
+            .access(this.venvDir)
+            .catch(() => exec(this.options.python, ['-m', 'venv', this.venvDir]))
 
         // Check if homeassistant needs an upgrade; saves a bit of time if it doesn't need one
-        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then((r) => r.json())
-        const { stdout } = await promisify(execFile)(this.path_pip, ['freeze'])
-        const installed = stdout.split('\n').find((v) => v.startsWith('homeassistant=='))
+        const installed = await this.hassVersion()
 
-        if (!installed || installed.split('==')[1] !== latest.info.version) {
-            await exec(this.path_pip, ['install', '--upgrade', 'homeassistant'])
+        if (!installed || installed !== this.cache.latestHass) {
+            await exec(this.path_pip(), ['install', '--upgrade', 'homeassistant'])
         }
+    }
+
+    private async readCache() {
+        try {
+            const versionFile = await fs.stat(this.path_cache())
+            if (Date.now() - versionFile.mtimeMs < 120 * 1000) {
+                this.cache = await JSON.parse(await fs.readFile(this.path_cache(), 'utf-8'))
+                return
+            }
+        } catch (e) {}
+        this.cache = {
+            latestHass: await this.latestHAVersion(),
+            startPort: 8130,
+        }
+    }
+
+    /** Fetch the latest hass version from online, caching for 2 minutes */
+    private async latestHAVersion() {
+        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then((r) => r.json())
+        return latest.info.version
+    }
+
+    /** Finds the version of Home Assistant installed */
+    private async hassVersion() {
+        const libFolders = await fs.readdir(join(this.venvDir, 'lib'))
+        const libs = await Promise.all(
+            libFolders.map((f) => fs.readdir(join(this.venvDir, 'lib', f, 'site-packages')))
+        )
+        const homeAssistant = libs
+            .flat()
+            .map((f) => f.match(/homeassistant-(.*)\.dist-info/))
+            .find((f) => f !== null)
+        return homeAssistant ? homeAssistant[1] : null
     }
 
     /** Checks if Home Assistant is listening on its TCP port */
@@ -179,7 +217,7 @@ export default class HassTest<E> {
         new Promise((resolve) => {
             net.createConnection(this.chosenPort, this.options.host)
                 .on('connect', () => resolve(true))
-                .on('error', () => setTimeout(() => resolve(false), 300))
+                .on('error', () => resolve(false))
         })
 
     /** Complete onboarding and fetch short-lived access token */
@@ -297,7 +335,7 @@ export default class HassTest<E> {
 
     public async addResource(filename: string, resourceType: LovelaceResourceType) {
         if (resourceType === 'module') {
-            await copyFile(filename, join(this.path_wwwDir, basename(filename)))
+            await fs.copyFile(filename, join(this.path_wwwDir(), basename(filename)))
         } else {
             throw new Error('Only the module type is supported for now')
         }
@@ -367,7 +405,7 @@ export default class HassTest<E> {
             this.process.kill('SIGINT')
             await new Promise((resolve) => this.process.on('exit', resolve))
         }
-        if (this.configDir) await rm(this.configDir, { recursive: true })
+        if (this.configDir) await fs.rm(this.configDir, { recursive: true })
     }
 
     public HassDashboard = class {
