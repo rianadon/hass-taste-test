@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Custom Card 1`] = `
+"<content-card-example>
+  <ha-card header=\\"Example-card\\" outlined=\\"false\\">
+    <h1 class=\\"card-header\\">
+      Example-card
+    </h1>
+    <slot></slot>
+    <div class=\\"card-content\\">
+      The state of input_boolean.test is off!
+      <br>
+      <br>
+      <img src=\\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 350 150'%3E%3Crect fill='%23cccccc' width='350' height='150'%3E%3C/rect%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='26px' fill='%23333333'%3E350x150%3C/text%3E%3C/svg%3E\\">
+    </div>
+  </ha-card>
+</content-card-example>
+"
+`;

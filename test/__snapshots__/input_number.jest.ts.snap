@@ -1,0 +1,115 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`input_number box 1`] = `
+"<hui-entities-card>
+  <ha-card outlined=\\"false\\">
+    <slot></slot>
+    <div class=\\"card-content\\" id=\\"states\\">
+      <div>
+        <hui-input-number-entity-row>
+          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
+              <ha-icon data-state=\\"30.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+            </state-badge>
+            <div class=\\"info text-content\\">
+              Numeric Input Box
+            </div>
+            <slot></slot>
+            <div class=\\"flex state\\">
+              <paper-input aria-disabled=\\"false\\" auto-validate=\\"\\" id=\\"input\\" no-label-float=\\"\\" pattern=\\"[0-9]+([\\\\.][0-9]+)?\\" tabindex=\\"0\\" type=\\"number\\" value=\\"30\\">…</paper-input>
+            </div>
+          </hui-generic-entity-row>
+        </hui-input-number-entity-row>
+      </div>
+    </div>
+  </ha-card>
+</hui-entities-card>
+"
+`;
+
+exports[`input_number box 2`] = `
+"<hui-entities-card>
+  <ha-card outlined=\\"false\\">
+    <slot></slot>
+    <div class=\\"card-content\\" id=\\"states\\">
+      <div>
+        <hui-input-number-entity-row>
+          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
+              <ha-icon data-state=\\"5.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+            </state-badge>
+            <div class=\\"info text-content\\">
+              Numeric Input Box
+            </div>
+            <slot></slot>
+            <div class=\\"flex state\\">
+              <paper-input aria-disabled=\\"false\\" auto-validate=\\"\\" id=\\"input\\" no-label-float=\\"\\" pattern=\\"[0-9]+([\\\\.][0-9]+)?\\" tabindex=\\"0\\" type=\\"number\\" value=\\"5\\">…</paper-input>
+            </div>
+          </hui-generic-entity-row>
+        </hui-input-number-entity-row>
+      </div>
+    </div>
+  </ha-card>
+</hui-entities-card>
+"
+`;
+
+exports[`input_number slider 1`] = `
+"<hui-entities-card>
+  <ha-card outlined=\\"false\\">
+    <slot></slot>
+    <div class=\\"card-content\\" id=\\"states\\">
+      <div>
+        <hui-input-number-entity-row>
+          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
+              <ha-icon data-state=\\"30.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+            </state-badge>
+            <div class=\\"info text-content\\">
+              Slider
+            </div>
+            <slot></slot>
+            <div class=\\"flex\\">
+              <ha-slider aria-disabled=\\"false\\" aria-valuemax=\\"35\\" aria-valuemin=\\"-20\\" aria-valuenow=\\"30\\" dir=\\"ltr\\" editable=\\"false\\" id=\\"input\\" ignore-bar-touch=\\"\\" ignoreBarTouch=\\"true\\" maxMarkers=\\"0\\" pin=\\"true\\" role=\\"slider\\" secondaryProgress=\\"0\\" snaps=\\"false\\" tabindex=\\"0\\" value=\\"30\\">…</ha-slider>
+              <span class=\\"state\\">
+                30.0
+              </span>
+            </div>
+          </hui-generic-entity-row>
+        </hui-input-number-entity-row>
+      </div>
+    </div>
+  </ha-card>
+</hui-entities-card>
+"
+`;
+
+exports[`input_number slider 2`] = `
+"<hui-entities-card>
+  <ha-card outlined=\\"false\\">
+    <slot></slot>
+    <div class=\\"card-content\\" id=\\"states\\">
+      <div>
+        <hui-input-number-entity-row>
+          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
+              <ha-icon data-state=\\"5.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+            </state-badge>
+            <div class=\\"info text-content\\">
+              Slider
+            </div>
+            <slot></slot>
+            <div class=\\"flex\\">
+              <ha-slider aria-disabled=\\"false\\" aria-valuemax=\\"35\\" aria-valuemin=\\"-20\\" aria-valuenow=\\"5\\" dir=\\"ltr\\" editable=\\"false\\" id=\\"input\\" ignore-bar-touch=\\"\\" ignoreBarTouch=\\"true\\" maxMarkers=\\"0\\" pin=\\"true\\" role=\\"slider\\" secondaryProgress=\\"0\\" snaps=\\"false\\" tabindex=\\"0\\" value=\\"5\\">…</ha-slider>
+              <span class=\\"state\\">
+                5.0
+              </span>
+            </div>
+          </hui-generic-entity-row>
+        </hui-input-number-entity-row>
+      </div>
+    </div>
+  </ha-card>
+</hui-entities-card>
+"
+`;

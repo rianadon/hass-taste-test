@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Timer element 1`] = `
+"<hui-timer-entity-row>
+  <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
+    <state-badge _showIcon=\\"true\\" class=\\"pointer\\" stateObj=\\"[object Object]\\" tabindex=\\"0\\">
+      <ha-icon data-state=\\"idle\\" icon=\\"hass:timer-outline\\" style=\\"\\">…</ha-icon>
+    </state-badge>
+    <div class=\\"info pointer text-content\\">
+      basic
+    </div>
+    <slot></slot>
+    <div class=\\"text-content\\">
+      Idle
+    </div>
+  </hui-generic-entity-row>
+</hui-timer-entity-row>
+"
+`;
