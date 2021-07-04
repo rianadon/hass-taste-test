@@ -120,9 +120,7 @@ export default class HassTest<E> {
         this.process = spawn(
             this.path_hass,
             ['-c', this.configDir, ...this.options.hassArgs],
-            {
-                stdio: 'inherit',
-            }
+            { stdio: 'inherit' }
         )
         while (!(await this.isUp())) {
             /* wait */
@@ -224,9 +222,7 @@ export default class HassTest<E> {
         await this.post('/api/onboarding/analytics', {}, true)
         const response = await this.post(
             '/api/onboarding/integration',
-            {
-                redirect_uri: this.url + '/?auth_callback=1',
-            },
+            { redirect_uri: this.url + '/?auth_callback=1' },
             true
         )
         this.accessCode = response.auth_code
@@ -250,14 +246,9 @@ export default class HassTest<E> {
         const state = Buffer.from(
             JSON.stringify({ hassUrl: this.url, clientId: this.clientId })
         ).toString('base64')
-        return (
-            this.url +
-            '/' +
-            name +
-            `?auth_callback=1&code=${encodeURIComponent(code)}&state=${encodeURIComponent(
-                state
-            )}`
-        )
+        return `${this.url}/${name}?auth_callback=1&code=${encodeURIComponent(
+            code
+        )}&state=${encodeURIComponent(state)}`
     }
 
     async post(url: string, body: any, authorize = false) {

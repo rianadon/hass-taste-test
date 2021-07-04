@@ -34,7 +34,6 @@ test('Timer states', async (t) => {
     ])
     // This is merely a reference to the element, so it can be reused
     const entityRow = dashboard.cards[0].narrow('.text-content')
-
     t.snapshot(await entityRow.text(), 'Idle state')
 
     await t.context.hass.callService('timer', 'start', {}, { entity_id: 'timer.laundry' })

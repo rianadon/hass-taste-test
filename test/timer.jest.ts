@@ -27,12 +27,10 @@ it('Timer element', async () => {
     const dashboard = await hass.Dashboard([
         { type: 'entities', entities: ['timer.basic'] },
     ])
-    expect(
-        await dashboard.cards[0].narrow('hui-timer-entity-row').html()
-    ).toMatchSnapshot()
-    expect(
-        await dashboard.cards[0].narrow('hui-timer-entity-row').screenshot()
-    ).toMatchImageSnapshot()
+
+    const row = dashboard.cards[0].narrow('hui-timer-entity-row')
+    expect(await row.html()).toMatchSnapshot()
+    expect(await row.screenshot()).toMatchImageSnapshot()
 })
 
 it('Timer states', async () => {
@@ -41,7 +39,6 @@ it('Timer states', async () => {
     ])
     // This is merely a reference to the element, so it can be reused
     const entityRow = dashboard.cards[0].narrow('.text-content')
-
     expect(await entityRow.text()).toMatchInlineSnapshot(`"Idle"`)
 
     await hass.callService('timer', 'start', {}, { entity_id: 'timer.laundry' })
