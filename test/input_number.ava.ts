@@ -1,6 +1,6 @@
 import HassTest, { multiply } from '../src/hass-test'
 import PlaywrightIntegration, { Element } from '../src/integrations/playwright'
-import anyTest, {TestInterface} from 'ava'
+import anyTest, { TestInterface } from 'ava'
 
 const test = anyTest as TestInterface<{ hass: HassTest<Element> }>
 
@@ -21,29 +21,39 @@ input_number:
     mode: box
 `
 
-test.before(async t => {
+test.before(async (t) => {
     t.context.hass = new HassTest(CONFIGURATION_YAML, {
-        integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox')
+        integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
     })
     await t.context.hass.start()
 })
 
-test.after.always(async t => await t.context.hass.close())
+test.after.always(async (t) => await t.context.hass.close())
 
-test('input_number slider', async t => {
+test('input_number slider', async (t) => {
     const dashboard = await t.context.hass.Dashboard([
-        { type: 'entities', entities: ['input_number.slider1'] }
+        { type: 'entities', entities: ['input_number.slider1'] },
     ])
     t.snapshot(await dashboard.cards[0].html())
-    await t.context.hass.callService('input_number', 'set_value', { value: 5 }, { entity_id: 'input_number.slider1' })
+    await t.context.hass.callService(
+        'input_number',
+        'set_value',
+        { value: 5 },
+        { entity_id: 'input_number.slider1' }
+    )
     t.snapshot(await dashboard.cards[0].html())
 })
 
-test('input_number box', async t => {
+test('input_number box', async (t) => {
     const dashboard = await t.context.hass.Dashboard([
-        { type: 'entities', entities: ['input_number.box1'] }
+        { type: 'entities', entities: ['input_number.box1'] },
     ])
     t.snapshot(await dashboard.cards[0].html())
-    await t.context.hass.callService('input_number', 'set_value', { value: 5 }, { entity_id: 'input_number.box1' })
+    await t.context.hass.callService(
+        'input_number',
+        'set_value',
+        { value: 5 },
+        { entity_id: 'input_number.box1' }
+    )
     t.snapshot(await dashboard.cards[0].html())
 })

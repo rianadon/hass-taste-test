@@ -2,7 +2,7 @@ import HassTest from '../src/hass-test'
 import PlaywrightIntegration, { Element } from '../src/integrations/playwright'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
-expect.extend({ toMatchImageSnapshot });
+expect.extend({ toMatchImageSnapshot })
 
 const CONFIGURATION_YAML = `
 input_number:
@@ -21,11 +21,11 @@ input_number:
     mode: box
 `
 
-let hass: HassTest<Element>;
+let hass: HassTest<Element>
 
 beforeAll(async () => {
     hass = new HassTest(CONFIGURATION_YAML, {
-        integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox')
+        integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
     })
     await hass.start()
 }, 10000)
@@ -34,21 +34,31 @@ afterAll(async () => await hass.close())
 
 it('input_number slider', async () => {
     const dashboard = await hass.Dashboard([
-        { type: 'entities', entities: ['input_number.slider1'] }
+        { type: 'entities', entities: ['input_number.slider1'] },
     ])
-    expect(await dashboard.cards[0].html()).toMatchSnapshot();
-    await hass.callService('input_number', 'set_value', { value: 5 }, { entity_id: 'input_number.slider1' })
-    expect(await dashboard.cards[0].html()).toMatchSnapshot();
+    expect(await dashboard.cards[0].html()).toMatchSnapshot()
+    await hass.callService(
+        'input_number',
+        'set_value',
+        { value: 5 },
+        { entity_id: 'input_number.slider1' }
+    )
+    expect(await dashboard.cards[0].html()).toMatchSnapshot()
 
     // BONUS: Image snapshot!
-    expect(await dashboard.cards[0].screenshot()).toMatchImageSnapshot();
+    expect(await dashboard.cards[0].screenshot()).toMatchImageSnapshot()
 })
 
 it('input_number box', async () => {
     const dashboard = await hass.Dashboard([
-        { type: 'entities', entities: ['input_number.box1'] }
+        { type: 'entities', entities: ['input_number.box1'] },
     ])
-    expect(await dashboard.cards[0].html()).toMatchSnapshot();
-    await hass.callService('input_number', 'set_value', { value: 5 }, { entity_id: 'input_number.box1' })
-    expect(await dashboard.cards[0].html()).toMatchSnapshot();
+    expect(await dashboard.cards[0].html()).toMatchSnapshot()
+    await hass.callService(
+        'input_number',
+        'set_value',
+        { value: 5 },
+        { entity_id: 'input_number.box1' }
+    )
+    expect(await dashboard.cards[0].html()).toMatchSnapshot()
 })
