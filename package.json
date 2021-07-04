@@ -10,14 +10,18 @@
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "home-assistant-js-websocket": "^5.10.0",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "proper-lockfile": "^4.1.2"
   },
   "devDependencies": {
     "@types/jest": "^26.0.23",
+    "@types/jest-image-snapshot": "^4.3.0",
     "@types/node-fetch": "^2.5.10",
+    "@types/proper-lockfile": "^4.1.1",
     "@types/ws": "^7.4.5",
     "ava": "^3.15.0",
     "jest": "^27.0.6",
+    "jest-image-snapshot": "^4.5.1",
     "playwright": "^1.12.3",
     "ts-jest": "^27.0.3",
     "ts-node": "^10.0.0",

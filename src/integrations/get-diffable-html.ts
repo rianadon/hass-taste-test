@@ -3,7 +3,10 @@
 // The code has been modified to traverse shadow DOM & find Lit and Polymer attributes
 
 const DEFAULT_IGNORE_TAGS = ['script', 'style'];
-const DEFAULT_IGNORE_CHILDREN = ['ha-icon', 'ha-slider'];
+const DEFAULT_IGNORE_CHILDREN = [
+  'ha-icon', 'ha-slider', // Home Assistant elements
+  'paper-input', // Polymer elements
+];
 const DEFAULT_EMPTY_ATTRS = ['class', 'id'];
 const VOID_ELEMENTS = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'menuitem', 'meta', 'param', 'source', 'track', 'wbr'];
 

@@ -1,33 +1,39 @@
 import { spawn, ChildProcess, execFile } from 'child_process'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { mkdtemp, writeFile, rm } from 'fs'
-import { promisify } from 'util'
+import { mkdtemp, writeFile, rm, stat } from 'fs/promises'
 import fetch from 'node-fetch'
-import { createConnection as createTCPConnection } from 'net'
+import { createConnection as createTCPConnection, createServer as createTCPServer } from 'net'
 import { Auth, callService, Connection, createConnection as createHAConnection, HassServiceTarget } from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
-import { LovelaceDashboardCreateParams } from './types'
-import { BrowserIntegration, Page } from './types'
+import { BrowserPage, LovelaceDashboardCreateParams } from './types'
+import { BrowserIntegration } from './types'
+import lockfile from 'proper-lockfile'
+import { promisify } from 'util'
 
-interface HassTestOptions {
+interface HassTestOptions<E> {
     python: string
     hassArgs: string[]
     host: string
-    port: number
+    port: number | null
     username: string
     password: string
     userLanguage: string
     userDisplayName: string
-    integration?: BrowserIntegration
+    integration?: BrowserIntegration<E>
 }
 
-const DEFAULT_CONFIG = (options: HassTestOptions) => `
+const DEFAULT_CONFIG = (options: HassTestOptions<any>, port: number) => `
 frontend:
 http:
   server_host: ${options.host}
-  server_port: ${options.port}
+  server_port: ${port}
 `
+
+// Global port to start search from
+// When multiple HassTest instances are created, they will all increment this port
+// Hopefully this stops them from colliding with one another
+let startPort = 8130
 
 const exec = (command: string, args: string[]) => new Promise((resolve, reject) => {
     const proc = spawn(command, args, { stdio: 'inherit' })
@@ -35,27 +41,28 @@ const exec = (command: string, args: string[]) => new Promise((resolve, reject) 
     proc.on('close', code => resolve(code))
 })
 
-export default class HassTest {
+export default class HassTest<E> {
 
     private venvDir!: string
     private configDir!: string
     private configFile!: string
 
+    private chosenPort!: number
     private process!: ChildProcess
     private accessCode!: string
     private accessToken!: string
-    private options: HassTestOptions
+    private options: HassTestOptions<E>
     private dashboards = 0
 
     public ws!: Connection
 
-    constructor(private config: string, options?: Partial<HassTestOptions>) {
+    constructor(private config: string, options?: Partial<HassTestOptions<E>>) {
         this.venvDir = join(tmpdir(), 'hasstest-venv')
         this.options = {
             python: 'python3',
             hassArgs: [],
             host: '127.0.0.1',
-            port: 8091,
+            port: null,
             username: 'dev',
             password: 'dev',
             userLanguage: 'en',
@@ -66,17 +73,53 @@ export default class HassTest {
 
     /** Start the HomeAssistant server and connect to its websocket */
     public async start() {
-        this.configDir = await promisify(mkdtemp)(join(tmpdir(), 'hasstest-'))
+        this.configDir = await mkdtemp(join(tmpdir(), 'hasstest-'))
         this.configFile = join(this.configDir, 'configuration.yaml')
-        await promisify(writeFile)(this.configFile, DEFAULT_CONFIG(this.options) + this.config)
 
+        const releaseLock = await this.acquireLock()
+        await this.findPort()
         await this.setupVenv()
+
+        await writeFile(this.configFile, DEFAULT_CONFIG(this.options, this.chosenPort) + this.config)
         this.process = spawn(join(this.venvDir, 'bin/hass'), ['-c', this.configDir, ...this.options.hassArgs], {
             stdio: 'inherit'
         })
 
         while (!(await this.isUp())) { /* wait */ }
+        await releaseLock() // Release lock once the process is up, so other instances can select a different port
+
         await this.onboard()
+    }
+
+    /** Wait for lockfile to become released. Forces HassTest instances to start up one at a time */
+    async acquireLock() {
+        for (let iterations = 0; iterations < 50; iterations++)
+            try {
+                return await lockfile.lock(tmpdir(), { lockfilePath: 'hasstest.lock' })
+            } catch (e) {
+                if (e.code !== 'ELOCKED') throw e
+                await new Promise(resolve => setTimeout(resolve, 100))
+            }
+
+        throw new Error('Timed out waiting for lockfile')
+    }
+
+     /** Find an open port to launch Home Assistant */
+    private async findPort() {
+        this.chosenPort = startPort++
+        const server = createTCPServer()
+        server.listen(this.chosenPort, this.options.host)
+        const success = await new Promise((resolve, reject) => {
+            server.on('error', (e: NodeJS.ErrnoException) => {
+                if (e.code === 'EADDRINUSE' || e.code === 'EACCESS') resolve(false)
+                else reject(e)
+            })
+            server.on('listening', () => {
+                server.close()
+                resolve(true)
+            })
+        })
+        if (!success) await this.findPort()
     }
 
     /** Creates a python virtual environment and installs Home Assistant */
@@ -95,7 +138,7 @@ export default class HassTest {
 
     /** Checks if Home Assistant is listening on its TCP port */
     private isUp = () => new Promise(resolve => {
-        createTCPConnection(this.options.port, this.options.host).on('connect', () => {
+        createTCPConnection(this.chosenPort, this.options.host).on('connect', () => {
             resolve(true)
         }).on("error", () => {
             setTimeout(() => resolve(false), 300)
@@ -122,7 +165,7 @@ export default class HassTest {
         this.accessCode = response.auth_code
     }
 
-    get url() { return `http://${this.options.host}:${this.options.port}` }
+    get url() { return `http://${this.options.host}:${this.chosenPort}` }
     get clientId() { return this.url + '/' }
     get dashboard() { return this.customDashboard('') }
 
@@ -222,7 +265,7 @@ export default class HassTest {
         await this.setDashboardView(dashboard, config)
         const code = await this.fetchLoginCode()
         const page = await this.options.integration.open(this.customDashboard(dashboard, code))
-        return new HassDashboard(this, config, page)
+        return new this.HassDashboard(this, dashboard, config, page)
     }
 
     /** Clean up connections and stop the HomeAssistant server */
@@ -233,29 +276,58 @@ export default class HassTest {
             this.process.kill('SIGINT')
             await new Promise(resolve => this.process.on('exit', resolve))
         }
-        if (this.configDir) await promisify(rm)(this.configDir, { recursive: true })
+        if (this.configDir) await rm(this.configDir, { recursive: true })
     }
-}
 
-export class HassDashboard {
+    public HassDashboard = class {
 
-    public cards: HassCard[] = []
+        public cards: HassCard<E>[] = []
 
-    constructor (private parent: HassTest, config: object[], page: Page) {
-        for (let i = 0; i < config.length; i++) {
-            this.cards.push(new HassCard(i, page))
+        constructor (public parent: HassTest<E>, public name: string, config: object[], page: BrowserPage<E>) {
+            for (let i = 0; i < config.length; i++) {
+                this.cards.push(new HassCard(i, page))
+            }
+        }
+
+        async openInBrowser() {
+            const code = await this.parent.fetchLoginCode()
+            const url = this.parent.customDashboard(this.name, code)
+            await this.parent.options.integration!.openInHeaded(url)
         }
     }
-
 }
 
-export class HassCard {
+export class HassCard<E> {
+    private selectors: string[]
 
-    constructor (private n: number, private page: Page) {}
+    constructor (private n: number, private page: BrowserPage<E>, selectors?: string[]) {
+        this.selectors = selectors || []
+    }
 
-    async html() {
-        const card = await this.page.getNthCard(this.n);
-        return this.page.shadowHTML(card);
+    private async element() {
+        let el = await this.page.getNthCard(this.n)
+        for (const sel of this.selectors) {
+            const element = await this.page.find(el, sel)
+            if (!element) throw new Error('Could not find selector ' + sel)
+            el = element
+        }
+        return el
+    }
+
+    public narrow(selector: string) {
+        return new HassCard<E>(this.n, this.page, [...this.selectors, selector])
+    }
+
+    public async html() {
+        return await this.page.shadowHTML(await this.element())
+    }
+
+    public async text() {
+        return (await this.page.textContent(await this.element())).trim()
+    }
+
+    public async screenshot() {
+        return await this.page.screenshot(await this.element())
     }
 
 }

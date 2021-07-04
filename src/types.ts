@@ -1,11 +1,15 @@
-export interface BrowserIntegration {
-    open(url: string): Promise<BrowserPage<unknown>>
+export interface BrowserIntegration<E> {
+    open(url: string): Promise<BrowserPage<E>>
+    openInHeaded(url: string): Promise<void>
     close(): Promise<void>
 }
 
 export interface BrowserPage<E> {
     getNthCard(n: number): Promise<E>
     shadowHTML(element: E): Promise<string>
+    textContent(element: E): Promise<string>
+    screenshot(element: E): Promise<Buffer>
+    find(element: E, selector: string): Promise<E | null | undefined>
 }
 
 export type Page = BrowserPage<unknown>
