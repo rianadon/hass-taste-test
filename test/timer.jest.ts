@@ -14,10 +14,9 @@ let hass: HomeAssistant<PlaywrightElement>
 expect.extend({ toMatchImageSnapshot })
 
 beforeAll(async () => {
-    hass = new HomeAssistant(CONFIGURATION_YAML, {
+    hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await hass.start()
 }, 30000)
 
 afterAll(async () => await hass.close())

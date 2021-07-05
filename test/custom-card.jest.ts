@@ -11,10 +11,9 @@ input_boolean:
 let hass: HomeAssistant<PlaywrightElement>
 
 beforeAll(async () => {
-    hass = new HomeAssistant(CONFIGURATION_YAML, {
+    hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await hass.start()
     await hass.addResource(__dirname + '/resources/custom-card.js', 'module')
 }, 30000)
 afterAll(async () => await hass.close())

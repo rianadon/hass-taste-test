@@ -12,11 +12,10 @@ const CONFIGURATION_YAML = ``
 let hass: HomeAssistant<PlaywrightElement>
 
 beforeAll(async () => {
-    hass = new HomeAssistant(CONFIGURATION_YAML, {
+    hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         customComponents: [componentDir],
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await hass.start()
     await hass.addIntegration('scheduler')
     await hass.addResource(cardFile, 'module')
 }, 30000)

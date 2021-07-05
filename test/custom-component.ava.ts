@@ -10,11 +10,10 @@ const [componentDir, cardFile] = stdout.toString().trim().split(' ')
 const CONFIGURATION_YAML = ``
 
 test.before(async (t) => {
-    t.context.hass = new HomeAssistant(CONFIGURATION_YAML, {
+    t.context.hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         customComponents: [componentDir],
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await t.context.hass.start()
     await t.context.hass.addIntegration('scheduler')
     await t.context.hass.addResource(cardFile, 'module')
 })

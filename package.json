@@ -1,6 +1,6 @@
 {
     "name": "hass-taste-test",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "Integration testing for Home Assistant cards",
     "main": "lib/index.js",
     "scripts": {
@@ -58,6 +58,6 @@
         ]
     },
     "lint-staged": {
-        "*.{js,css,md}": "prettier --write"
+        "*.{ts,js,css,md}": "prettier --write"
     }
 }

@@ -9,10 +9,9 @@ input_boolean:
 `
 
 test.before(async (t) => {
-    t.context.hass = new HomeAssistant(CONFIGURATION_YAML, {
+    t.context.hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await t.context.hass.start()
     await t.context.hass.addResource(__dirname + '/resources/custom-card.js', 'module')
 })
 

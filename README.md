@@ -52,10 +52,9 @@ input_boolean:
 let hass // Global Home Assistant for this test file
 
 beforeAll(async () => {
-    hass = new HomeAssistant(CONFIGURATION_YAML, {
+    hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await hass.start()
     // Add your card's JavaScript bundle to Lovelace
     await hass.addResource(__dirname + '/../dist/boilerplate-card.js', 'module')
 }, 30000) // 30 second timeout in case Home Assistant needs to install
@@ -172,9 +171,9 @@ To see examples of these methods in action, see the [tests](https://github.com/r
 
 ### `HomeAssistant`
 
-#### `constructor(config, option)`
+#### `static async create(config, options) -> HomeAssistant`
 
-Sets up Home Assistant. Appends the string `config` to the contents of `configuration.yaml`. You can use the following properties of `options` to configure the instance:
+Configures, starts, and connects to a new Home Assistant instance. Appends the string `config` to the contents of `configuration.yaml`. You can use the following properties of `options` to configure the instance:
 
 | Option             | Description                                                                              | Default     |
 | ------------------ | ---------------------------------------------------------------------------------------- | ----------- |
@@ -189,9 +188,9 @@ Sets up Home Assistant. Appends the string `config` to the contents of `configur
 | `customComponents` | Paths to components to place in the `custom_components` folder                           | `[]`        |
 | `browser`          | Browser integration to use for interacting with dashboard cards                          | `undefined` |
 
-#### `async start()`
+#### `static async connect(options) -> HomeAssistant`
 
-Configures, starts, and connects to the Home Assistant instance.
+UNTESTED! Connects to an existing Home Assistant instance. The `option` argument is the same as the `create` method: You might wish to set `host`, `port`, `username`, and `password`.
 
 #### `ws`
 
@@ -201,11 +200,11 @@ The Home Assistant websocket. This is an instance of [`home-assistant-js-websock
 
 Returns an authenticated link (i.e. it will log you in when you visit) to the Home Assistant default dashboard. You can log this url to the console and open it yourself, which may be useful for debugging. Just make sure your test doesn't quit too quickly on you!
 
-#### `customDashboard(path)`
+#### `customDashboard(path) -> string`
 
 Returns an authenticated link (i.e. it will log you in when you visit) to a custom dashboard, given its path (looks something like `lovelace-test`).
 
-#### `async post(url, body, authorize=false)`
+#### `async post(url, body, authorize=false) -> json response`
 
 Sends a JSON POST request over the REST API. Really only useful internally, but if you need this method you'll likeley want to set `authorize` to `true` so you send requests as an authenticated user.
 
@@ -229,7 +228,7 @@ More for internal use, but this method allows you to create a dashboard and manu
 
 Configure a dashboard. Pass in the cards you'd like to add in config. Path should look something like `lovelace-test`.
 
-#### `async Dashboard(config, options)`
+#### `async Dashboard(config, options) -> HomeAssistant.HassDashboard`
 
 Creates and configures a dashboard using `createDashboard` and `setDashboardView`, then opens the page in the browser and returns a Dashboard object.
 
@@ -238,13 +237,13 @@ Cards should be listed in `config`, and options allows you to set:
 -   `colorScheme`: Can be `light` or `dark` to use the page's light or dark theme
 -   That's all!
 
-#### `async close`
+#### `async close()`
 
 Cleans up connecions and stops the Home Asssistant server.
 
 ### `HomeAsssistant.HassDashboard`
 
-#### `async link()`
+#### `async link() -> string`
 
 Generates a link to the dashboard that will log you in. You can log this url to the console and open it yourself, which may be useful for debugging. Just make sure your test doesn't quit too quickly on you!
 
@@ -252,19 +251,19 @@ Generates a link to the dashboard that will log you in. You can log this url to 
 
 Opens the dashboard in a non-headless version of the browser you configured the `HomeAssistant` to use. **Very useful for debugging**, especially if you like using the developer tools. The returned promise will resolve once you close the browser tab.
 
-#### `async cards[n].element()`
+#### `async cards[n].element() -> element type`
 
 Returns the browser element for the card. In the case of Playwright, this is a `ElementHandle`, which allows you to simulate clicks, listen for events, etc.
 
-#### `async cards[n].text()`
+#### `async cards[n].text() -> string`
 
 Returns the card element's trimmed `textContent`
 
-#### `async cards[n].screenshot()`
+#### `async cards[n].screenshot() -> Buffer`
 
 Returns a Buffer containing image data for the card's screenshot.
 
-#### `async cards[n].html(options)`
+#### `async cards[n].html(options) -> string`
 
 Returns normalized HTML for of the card. This differs from `outerHTML` in that:
 

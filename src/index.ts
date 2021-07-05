@@ -59,7 +59,7 @@ export class HomeAssistant<E> {
 
     public ws!: hass.Connection
 
-    constructor(private config: string, options?: Partial<HassOptions<E>>) {
+    private constructor(options?: Partial<HassOptions<E>>) {
         this.venvDir = join(tmpdir(), 'hasstest-venv')
         this.options = {
             python: 'python3',
@@ -82,8 +82,22 @@ export class HomeAssistant<E> {
     private path_pip = () => join(this.venvDir, 'bin/pip')
     private path_cache = () => join(tmpdir(), 'hasstest-cache')
 
-    /** Start the HomeAssistant server and connect to its websocket */
-    public async start() {
+    /** Create and connect to an isolated Home Assistant instance */
+    public static async create<E>(config: string, options?: Partial<HassOptions<E>>) {
+        const hass = new HomeAssistant<E>(options)
+        await hass.start(config)
+        return hass
+    }
+
+    /** Log into an existing Home Assistant instance */
+    public static async connect<E>(options?: Partial<HassOptions<E>>) {
+        const hass = new HomeAssistant<E>(options)
+        await hass.login()
+        return hass
+    }
+
+    /** Start the Home Assistant server and connect to its websocket */
+    private async start(config: string) {
         this.configDir = await fs.mkdtemp(join(tmpdir(), 'hasstest-'))
 
         // Step 1: Create necessary directories
@@ -96,7 +110,7 @@ export class HomeAssistant<E> {
         const releaseLock = await this.acquireLock()
         this.cache = await this.readCache()
         await Promise.all([
-            this.findPort().then(() => this.writeYAMLConfiguration()),
+            this.findPort().then(() => this.writeYAMLConfiguration(config)),
             this.setupVenv(),
             fs.writeFile(this.path_cache(), JSON.stringify(this.cache)),
         ])
@@ -111,13 +125,13 @@ export class HomeAssistant<E> {
     }
 
     /** Write configuration.yaml */
-    private async writeYAMLConfiguration() {
+    private async writeYAMLConfiguration(additionalConfig: string) {
         const config = [
             'frontend:',
             'http:',
             `  server_host: ${this.options.host}`,
             `  server_port: ${this.chosenPort}`,
-            this.config,
+            additionalConfig,
         ].join('\n')
         fs.writeFile(this.path_confFile(), config)
     }
@@ -291,10 +305,10 @@ export class HomeAssistant<E> {
     }
 
     /** Login and create tokens and websocket */
-    // private async login() {
-    //     this.accessCode = await this.fetchLoginCode()
-    //     await this.launchWebsocket(this.accessCode)
-    // }
+    public async login() {
+        this.accessCode = await this.fetchLoginCode()
+        await this.launchWebsocket(this.accessCode)
+    }
 
     private async launchWebsocket(code: string) {
         const params = new URLSearchParams()

@@ -21,10 +21,9 @@ input_number:
 `
 
 test.before(async (t) => {
-    t.context.hass = new HomeAssistant(CONFIGURATION_YAML, {
+    t.context.hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await t.context.hass.start()
 })
 
 test.after.always(async (t) => await t.context.hass.close())
