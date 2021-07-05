@@ -15,8 +15,9 @@ import {
 } from './types'
 import { BrowserIntegration } from './types'
 import lockfile from 'proper-lockfile'
+export { PlaywrightIntegration, PlaywrightElement } from './integrations/playwright'
 
-interface HassTestOptions<E> {
+interface HassOptions<E> {
     python: string
     hassArgs: string[]
     host: string
@@ -44,7 +45,7 @@ const exec = (command: string, args: string[]) =>
         proc.on('close', (code) => resolve(code))
     })
 
-export default class HassTest<E> {
+export class HomeAssistant<E> {
     private venvDir!: string
     private configDir!: string
 
@@ -53,12 +54,12 @@ export default class HassTest<E> {
     private process!: ChildProcess
     private accessCode!: string
     private accessToken!: string
-    private options: HassTestOptions<E>
+    private options: HassOptions<E>
     private dashboards = 0
 
     public ws!: hass.Connection
 
-    constructor(private config: string, options?: Partial<HassTestOptions<E>>) {
+    constructor(private config: string, options?: Partial<HassOptions<E>>) {
         this.venvDir = join(tmpdir(), 'hasstest-venv')
         this.options = {
             python: 'python3',
@@ -192,13 +193,13 @@ export default class HassTest<E> {
         }
     }
 
-    /** Fetch the latest hass version from online, caching for 2 minutes */
+    /** Fetch the latest hass version from pypi */
     private async latestHAVersion(): Promise<string> {
         const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then((r) => r.json())
         return latest.info.version
     }
 
-    /** Finds the version of Home Assistant installed */
+    /** Finds the version of Home Assistant installed, if any */
     private async hassVersion(): Promise<string | null> {
         const libFolders = await fs.readdir(join(this.venvDir, 'lib'))
         const libs = await Promise.all(
@@ -414,7 +415,7 @@ export default class HassTest<E> {
         public cards: HassCard<E>[] = []
 
         constructor(
-            public parent: HassTest<E>,
+            public parent: HomeAssistant<E>,
             public name: string,
             config: object[],
             page: BrowserPage<E>

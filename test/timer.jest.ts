@@ -1,5 +1,4 @@
-import HassTest, { multiply } from '../src/hass-test'
-import PlaywrightIntegration, { Element } from '../src/integrations/playwright'
+import { HomeAssistant, PlaywrightIntegration, PlaywrightElement } from '../src'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
 const CONFIGURATION_YAML = `
@@ -10,12 +9,12 @@ timer:
     duration: "00:01:00"
 `
 
-let hass: HassTest<Element>
+let hass: HomeAssistant<PlaywrightElement>
 
 expect.extend({ toMatchImageSnapshot })
 
 beforeAll(async () => {
-    hass = new HassTest(CONFIGURATION_YAML, {
+    hass = new HomeAssistant(CONFIGURATION_YAML, {
         integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
     })
     await hass.start()
@@ -41,7 +40,7 @@ it('Timer states', async () => {
     expect(await entityRow.text()).toMatchInlineSnapshot(`"59"`)
 
     await hass.callService('timer', 'pause', {}, { entity_id: 'timer.laundry' })
-    expect(await entityRow.text()).toMatchInlineSnapshot(`"1:00 (Paused)"`)
+    expect(await entityRow.text()).toMatch('(Paused)')
 
     await hass.callService('timer', 'cancel', {}, { entity_id: 'timer.laundry' })
     expect(await entityRow.text()).toMatchInlineSnapshot(`"Idle"`)

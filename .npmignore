@@ -1,0 +1,6 @@
+src
+test
+.github
+.husky
+.prettierignore
+tsconfig.json

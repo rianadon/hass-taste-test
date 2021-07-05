@@ -1,8 +1,7 @@
-import HassTest from '../src/hass-test'
-import PlaywrightIntegration, { Element } from '../src/integrations/playwright'
+import { HomeAssistant, PlaywrightIntegration, PlaywrightElement } from '../src'
 import anyTest, { TestInterface } from 'ava'
 
-const test = anyTest as TestInterface<{ hass: HassTest<Element> }>
+const test = anyTest as TestInterface<{ hass: HomeAssistant<PlaywrightElement> }>
 
 const CONFIGURATION_YAML = `
 template:
@@ -12,7 +11,7 @@ template:
 `
 
 test.before(async (t) => {
-    t.context.hass = new HassTest(CONFIGURATION_YAML, {
+    t.context.hass = new HomeAssistant(CONFIGURATION_YAML, {
         integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
     })
     await t.context.hass.start()

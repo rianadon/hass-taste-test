@@ -5,9 +5,9 @@ import { BrowserIntegration, BrowserPage, DashboardOptions, DiffOptions } from '
 
 const htmlScript = readFileSync(__dirname + '/../../lib/integrations/get-diffable-html.js', 'utf-8')
 
-export type Element = ElementHandle<Node>
+export type PlaywrightElement = ElementHandle<Node>
 
-export default class PlaywrightIntegration implements BrowserIntegration<Element> {
+export class PlaywrightIntegration implements BrowserIntegration<PlaywrightElement> {
     private static browsers = { chromium, webkit, firefox }
     private browserName: keyof typeof PlaywrightIntegration.browsers
     private browserPromise: Promise<Browser>
@@ -48,28 +48,28 @@ export default class PlaywrightIntegration implements BrowserIntegration<Element
     }
 }
 
-export class PlaywrightPage implements BrowserPage<Element> {
+export class PlaywrightPage implements BrowserPage<PlaywrightElement> {
     constructor(private page: Page) {}
 
     async getNthCard(n: number) {
         return await this.page.waitForSelector(`.column>*:nth-child(${n + 1})`)
     }
 
-    async shadowHTML(element: Element, options?: DiffOptions) {
+    async shadowHTML(element: PlaywrightElement, options?: DiffOptions) {
         if (!element) throw new Error('shadowHTML expects a non-null element')
         const func = new Function('args', htmlScript + 'return getDiffableHTML(args[0], args[1])')
         return (await this.page.evaluate(func as any, [element, options])) as string
     }
 
-    async screenshot(element: Element) {
+    async screenshot(element: PlaywrightElement) {
         return await element.screenshot()
     }
 
-    async find(element: Element, selector: string) {
+    async find(element: PlaywrightElement, selector: string) {
         return await element.$(selector)
     }
 
-    async textContent(element: Element) {
+    async textContent(element: PlaywrightElement) {
         const content = await element.textContent()
         if (content === null) throw new Error('Element has no textcontent')
         return content

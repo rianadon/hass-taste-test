@@ -1,5 +1,4 @@
-import HassTest from '../src/hass-test'
-import PlaywrightIntegration, { Element } from '../src/integrations/playwright'
+import { HomeAssistant, PlaywrightIntegration, PlaywrightElement } from '../src'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
 expect.extend({ toMatchImageSnapshot })
@@ -11,10 +10,10 @@ template:
      state: 42
 `
 
-let hass: HassTest<Element>
+let hass: HomeAssistant<PlaywrightElement>
 
 beforeAll(async () => {
-    hass = new HassTest(CONFIGURATION_YAML, {
+    hass = new HomeAssistant(CONFIGURATION_YAML, {
         integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
     })
     await hass.start()

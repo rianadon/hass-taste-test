@@ -1,13 +1,14 @@
 {
-    "name": "hass-test",
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
+    "name": "hass-taste-test",
+    "version": "0.0.3",
+    "description": "Integration testing for Home Assistant cards",
+    "main": "lib/index.js",
     "scripts": {
         "test": "jest && ava",
         "prepare": "husky install"
     },
-    "author": "",
+    "author": "rianadon",
+    "homepage": "https://github.com/rianadon/hass-taste-test#readme",
     "license": "AGPL-3.0-or-later",
     "dependencies": {
         "home-assistant-js-websocket": "^5.10.0",
