@@ -35,7 +35,7 @@ npm install --save-dev hass-taste-test jest jest-image-snapshot playwright
 2. Create a tests directory `__tests__` and create a file within it: `__tests__/card.test.js`. Add this code:
 
 ```javascript
-const { HomeAssistant, PlaywrightIntegration } = require('hass-taste-test')
+const { HomeAssistant, PlaywrightBrowser } = require('hass-taste-test')
 const { toMatchImageSnapshot } = require('jest-image-snapshot')
 
 expect.extend({ toMatchImageSnapshot })
@@ -49,7 +49,7 @@ let hass // Global Home Assistant for this test file
 
 beforeAll(async () => {
     hass = new HomeAssistant(CONFIGURATION_YAML, {
-        integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
+        browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
     await hass.start()
     // Add your card's JavaScript bundle to Lovelace

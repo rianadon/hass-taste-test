@@ -1,4 +1,4 @@
-import { HomeAssistant, PlaywrightIntegration, PlaywrightElement } from '../src'
+import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
 import anyTest, { TestInterface } from 'ava'
 
 const test = anyTest as TestInterface<{ hass: HomeAssistant<PlaywrightElement> }>
@@ -10,7 +10,7 @@ input_boolean:
 
 test.before(async (t) => {
     t.context.hass = new HomeAssistant(CONFIGURATION_YAML, {
-        integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
+        browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
     await t.context.hass.start()
     await t.context.hass.addResource(__dirname + '/resources/custom-card.js', 'module')

@@ -7,9 +7,9 @@ const htmlScript = readFileSync(__dirname + '/../../lib/integrations/get-diffabl
 
 export type PlaywrightElement = ElementHandle<Node>
 
-export class PlaywrightIntegration implements BrowserIntegration<PlaywrightElement> {
+export class PlaywrightBrowser implements BrowserIntegration<PlaywrightElement> {
     private static browsers = { chromium, webkit, firefox }
-    private browserName: keyof typeof PlaywrightIntegration.browsers
+    private browserName: keyof typeof PlaywrightBrowser.browsers
     private browserPromise: Promise<Browser>
 
     constructor(browserName: string, options?: LaunchOptions) {
@@ -18,7 +18,7 @@ export class PlaywrightIntegration implements BrowserIntegration<PlaywrightEleme
                 `Browser name ${browserName} must be one of chromium, webkit, or firefox`
             )
         this.browserName = browserName
-        this.browserPromise = PlaywrightIntegration.browsers[browserName].launch(options)
+        this.browserPromise = PlaywrightBrowser.browsers[browserName].launch(options)
     }
 
     async open(url: string, options: DashboardOptions) {
@@ -34,7 +34,7 @@ export class PlaywrightIntegration implements BrowserIntegration<PlaywrightEleme
     }
 
     async openInHeaded(url: string) {
-        const browser = await PlaywrightIntegration.browsers[this.browserName].launch({
+        const browser = await PlaywrightBrowser.browsers[this.browserName].launch({
             headless: false,
         })
         const page = await browser.newPage()

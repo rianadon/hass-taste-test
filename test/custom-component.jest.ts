@@ -1,4 +1,4 @@
-import { HomeAssistant, PlaywrightIntegration, PlaywrightElement } from '../src'
+import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 import { execFileSync } from 'child_process'
 
@@ -14,7 +14,7 @@ let hass: HomeAssistant<PlaywrightElement>
 beforeAll(async () => {
     hass = new HomeAssistant(CONFIGURATION_YAML, {
         customComponents: [componentDir],
-        integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
+        browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
     await hass.start()
     await hass.addIntegration('scheduler')

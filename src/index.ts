@@ -15,7 +15,7 @@ import {
 } from './types'
 import { BrowserIntegration } from './types'
 import lockfile from 'proper-lockfile'
-export { PlaywrightIntegration, PlaywrightElement } from './integrations/playwright'
+export { PlaywrightBrowser, PlaywrightElement } from './integrations/playwright'
 
 interface HassOptions<E> {
     python: string
@@ -27,7 +27,7 @@ interface HassOptions<E> {
     userLanguage: string
     userDisplayName: string
     customComponents: string[]
-    integration?: BrowserIntegration<E>
+    browser?: BrowserIntegration<E>
 }
 
 interface CacheConf {
@@ -386,14 +386,14 @@ export class HomeAssistant<E> {
     }
 
     async Dashboard(config: object[], options?: DashboardOptions) {
-        if (!this.options.integration)
+        if (!this.options.browser)
             throw new Error(
                 'Cannot launch a dashboard without a browser integration. Make sure to specify options.integration'
             )
         const dashboard = await this.createDashboard()
         await this.setDashboardView(dashboard, config)
         const code = await this.fetchLoginCode()
-        const page = await this.options.integration.open(
+        const page = await this.options.browser.open(
             this.customDashboard(dashboard, code),
             options || {}
         )
@@ -402,7 +402,7 @@ export class HomeAssistant<E> {
 
     /** Clean up connections and stop the HomeAssistant server */
     async close() {
-        if (this.options.integration) await this.options.integration.close()
+        if (this.options.browser) await this.options.browser.close()
         if (this.ws) this.ws.close()
         if (this.process) {
             this.process.kill('SIGINT')
@@ -431,7 +431,7 @@ export class HomeAssistant<E> {
         }
 
         async openInBrowser() {
-            await this.parent.options.integration!.openInHeaded(await this.link())
+            await this.parent.options.browser!.openInHeaded(await this.link())
         }
     }
 }
