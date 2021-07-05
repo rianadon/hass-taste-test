@@ -40,7 +40,7 @@ test('Timer states', async (t) => {
     t.snapshot(await entityRow.text(), 'Active state')
 
     await t.context.hass.callService('timer', 'pause', {}, { entity_id: 'timer.laundry' })
-    t.snapshot(await entityRow.text(), 'Paused state')
+    t.assert((await entityRow.text()).endsWith(' (Paused)'))
 
     await t.context.hass.callService('timer', 'cancel', {}, { entity_id: 'timer.laundry' })
     t.snapshot(await entityRow.text(), 'Idle state')

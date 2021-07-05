@@ -22,8 +22,12 @@ export interface DiffOptions {
     stripUndefinedAttributes: boolean
 }
 
+export type DashboardOptions = Partial<{
+    colorScheme: "light" | "dark" | "no-preference"
+}>
+
 export interface BrowserIntegration<E> {
-    open(url: string): Promise<BrowserPage<E>>
+    open(url: string, options: DashboardOptions): Promise<BrowserPage<E>>
     openInHeaded(url: string): Promise<void>
     close(): Promise<void>
 }

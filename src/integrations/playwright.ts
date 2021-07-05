@@ -1,6 +1,7 @@
-import { chromium, webkit, firefox, Browser, ElementHandle, Page, LaunchOptions } from 'playwright'
+import { Browser, ElementHandle, Page, LaunchOptions, BrowserContext } from 'playwright'
+import { chromium, webkit, firefox } from 'playwright'
 import { readFileSync } from 'fs'
-import { BrowserIntegration, BrowserPage, DiffOptions } from '../types'
+import { BrowserIntegration, BrowserPage, DashboardOptions, DiffOptions } from '../types'
 
 const htmlScript = readFileSync(__dirname + '/../../lib/integrations/get-diffable-html.js', 'utf-8')
 
@@ -20,8 +21,13 @@ export default class PlaywrightIntegration implements BrowserIntegration<Element
         this.browserPromise = PlaywrightIntegration.browsers[browserName].launch(options)
     }
 
-    async open(url: string) {
-        const browser = await this.browserPromise
+    async open(url: string, options: DashboardOptions) {
+        let browser: Browser | BrowserContext = await this.browserPromise
+        if (options) {
+            browser = await browser.newContext({
+                colorScheme: options.colorScheme,
+            })
+        }
         const page = await browser.newPage()
         await page.goto(url)
         return new PlaywrightPage(page)

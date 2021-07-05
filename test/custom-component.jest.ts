@@ -20,7 +20,7 @@ beforeAll(async () => {
     await hass.start()
     await hass.addIntegration('scheduler')
     await hass.addResource(cardFile, 'module')
-}, 10000)
+}, 30000)
 afterAll(async () => await hass.close())
 
 it('Custom Component Card', async () => {
@@ -28,4 +28,4 @@ it('Custom Component Card', async () => {
     const card = dashboard.cards[0]
     expect(await card.html()).toMatchSnapshot()
     expect(await card.screenshot()).toMatchImageSnapshot()
-}, 10000000)
+})

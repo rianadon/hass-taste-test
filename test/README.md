@@ -12,6 +12,10 @@ Basic example that shows off basic functionality
 
 Uses the `.narrow` method to select relevant parts of the card
 
+## `sensor.ts`
+
+Switches the color theme between light and dark mode
+
 ## `custom-card.ts`
 
 Demonstrates adding a custom card as a module

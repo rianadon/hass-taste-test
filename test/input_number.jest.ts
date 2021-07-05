@@ -28,7 +28,7 @@ beforeAll(async () => {
         integration: new PlaywrightIntegration(process.env.BROWSER || 'firefox'),
     })
     await hass.start()
-}, 10000)
+}, 30000)
 
 afterAll(async () => await hass.close())
 

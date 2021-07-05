@@ -8,6 +8,7 @@ import * as hass from 'home-assistant-js-websocket'
 import { createSocket } from './socket'
 import {
     BrowserPage,
+    DashboardOptions,
     DiffOptions,
     LovelaceDashboardCreateParams,
     LovelaceResourceType,
@@ -92,7 +93,7 @@ export default class HassTest<E> {
 
         // Step 2: Create venv and sort out networking under lock
         const releaseLock = await this.acquireLock()
-        await this.readCache()
+        this.cache = await this.readCache()
         await Promise.all([
             this.findPort().then(() => this.writeYAMLConfiguration()),
             this.setupVenv(),
@@ -142,7 +143,6 @@ export default class HassTest<E> {
                 if (e.code !== 'ELOCKED') throw e
                 await sleep()
             }
-
         throw new Error('Timed out waiting for lockfile')
     }
 
@@ -179,28 +179,27 @@ export default class HassTest<E> {
         }
     }
 
-    private async readCache() {
+    private async readCache(): Promise<CacheConf> {
         try {
             const versionFile = await fs.stat(this.path_cache())
-            if (Date.now() - versionFile.mtimeMs < 120 * 1000) {
-                this.cache = await JSON.parse(await fs.readFile(this.path_cache(), 'utf-8'))
-                return
+            if (Date.now() - versionFile.mtimeMs < 2000) {
+                return await JSON.parse(await fs.readFile(this.path_cache(), 'utf-8'))
             }
         } catch (e) {}
-        this.cache = {
+        return {
             latestHass: await this.latestHAVersion(),
             startPort: 8130,
         }
     }
 
     /** Fetch the latest hass version from online, caching for 2 minutes */
-    private async latestHAVersion() {
+    private async latestHAVersion(): Promise<string> {
         const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then((r) => r.json())
         return latest.info.version
     }
 
     /** Finds the version of Home Assistant installed */
-    private async hassVersion() {
+    private async hassVersion(): Promise<string | null> {
         const libFolders = await fs.readdir(join(this.venvDir, 'lib'))
         const libs = await Promise.all(
             libFolders.map((f) => fs.readdir(join(this.venvDir, 'lib', f, 'site-packages')))
@@ -385,7 +384,7 @@ export default class HassTest<E> {
         return await hass.callService(this.ws, domain, service, serviceData, target)
     }
 
-    async Dashboard(config: object[]) {
+    async Dashboard(config: object[], options?: DashboardOptions) {
         if (!this.options.integration)
             throw new Error(
                 'Cannot launch a dashboard without a browser integration. Make sure to specify options.integration'
@@ -393,7 +392,10 @@ export default class HassTest<E> {
         const dashboard = await this.createDashboard()
         await this.setDashboardView(dashboard, config)
         const code = await this.fetchLoginCode()
-        const page = await this.options.integration.open(this.customDashboard(dashboard, code))
+        const page = await this.options.integration.open(
+            this.customDashboard(dashboard, code),
+            options || {}
+        )
         return new this.HassDashboard(this, dashboard, config, page)
     }
 
