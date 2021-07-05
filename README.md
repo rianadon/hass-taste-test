@@ -1,7 +1,7 @@
 <p align="center">
-  <!-- <a href="http://badge.fury.io/js/hass-taste-test"><img src="https://badge.fury.io/js/hass-taste-test.svg" alt="npm version"></a> -->
+  <a href="http://badge.fury.io/js/hass-taste-test"><img src="https://badge.fury.io/js/hass-taste-test.svg?color=brightgreen" alt="npm version"></a>
   <a href="https://github.com/rianadon/hass-taste-test/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-AGPL-brightgreen.svg" alt="Hass Taste Test is released under the AGPL 3.0 license." />
+    <img src="https://img.shields.io/badge/license-AGPL_3.0-brightgreen.svg" alt="Hass Taste Test is released under the AGPL 3.0 license." />
   </a>
 </p>
 
@@ -20,11 +20,15 @@
 
 🚢 **Deploy confidently**: Easily test many obtuse configurations and skip the manual QA testing.
 
+_Hass Taste Test is not developed or maintained by the authors of Home Assistant, and it is currently in prerelease so the API may change. Use at your own risk._
+
+Jump to: [Quickstart](#quickstart) | [Visual Regression Testing](#why-visual-regression-testing) | [Concepts](#important-concepts) | [Best Practices](#best-practices) | [Reference](#reference)
+
 ## Quickstart
 
 This guide will walk you through setting up tests for visual regression testing. This is a [fun and easy](#why-visual-regression-testing) way to quickly test your card responds how it's supposed to, and ensures that if you add a bug (regression) to your code that messes up the card, you'll catch it before you deploy!
 
-I recommend using either [Jest](https://jestjs.io/) or [AVA](https://avajs.dev) for writing tests and [Playwright](playwright.dev/) for browser automation. Both Jest and AVA run test files in parallel, and Playwright allows you to test on Chromium, Firefox, and WebKit. Since Jest has great support for [visual snapshots](https://github.com/americanexpress/jest-image-snapshot), this guide will use Jest.
+I recommend using either [Jest](https://jestjs.io) or [AVA](https://avajs.dev) for writing tests and [Playwright](https://playwright.dev) for browser automation. Both Jest and AVA run test files in parallel, and Playwright allows you to test on Chromium, Firefox, and WebKit. Since Jest has great support for [image snapshots](https://github.com/americanexpress/jest-image-snapshot), this guide will use Jest.
 
 1. Install dependencies
 
@@ -63,6 +67,7 @@ it('Custom Card', async () => {
     const dashboard = await hass.Dashboard([
         { type: 'custom:boilerplate-card', entity: 'input_boolean.test' },
     ])
+    // await hass.callService() is how you can call a service
     expect(await dashboard.cards[0].screenshot()).toMatchImageSnapshot()
 })
 ```
@@ -71,7 +76,11 @@ it('Custom Card', async () => {
 
 4. When you change the interface of your card, update your snapshots using `npx jest -u`. Even better, install Jest globally (`npm install -g jest`)—then you don't need to use `npx` and can run `jest -u`.
 
-You may now consider customizing your Jest configuration using (`npx jest --init`), [learning more about Jest](https://jestjs.io/docs/getting-started), and browsing through the [examples](test/)
+You may now consider customizing your Jest configuration using (`npx jest --init`), [learning more about Jest](https://jestjs.io/docs/getting-started), and browsing through the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test)
+
+### But I want to write my tests in TypeScript
+
+Install [`ts-jest`](https://kulshekhar.github.io/ts-jest/docs/getting-started/installation/) and `@types/jest` along with the other dependencies, then run `npx ts-jest config:init` to configure Jest for Typescript. Browse the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test) for example tests; they are all written in TypeScript.
 
 ## Why visual regression testing?
 
@@ -96,3 +105,173 @@ What if visual regression testing is not for me?
     expect(await dashboard.cards[0].narrow('.text-content').text()).to… // Jest
     t.assert(await dashboard.cards[0].narrow('.text-content').text()… ) // AVA
     ```
+
+## Important concepts
+
+-   **Home Assistant objects**: The `HomeAssistant` class creates a new Home Assistant Core instance. Each of these is fully isolated, so you can write multiple tests files each doing wildly different things without worrying about conflicts. They start up in parallel, except for about <100ms when multiple instances coordinate amongst themselves sequentially to choose unique ports and ensure Home Assistant is installed and upgraded.
+
+    Each instance creates a configuration directory in your [temporary directory](https://en.wikipedia.org/wiki/Temporary_folder), and these are deleted when `hass.close()` is called. The Home Assistant Core virtual environment is also stored in the temp directory, but is kept around for reuse.
+
+-   **Dashboards**: Individual tests are isolated by using unique Lovelace Dashboards. This isolation is good for tracking down which test broke and for, if you are using AVA, running tests within a file in parallel. The name and id for dashboards are automatically generated.
+
+    You can grab references to cards and elements using `dashboard.cards[0]` or `dashboards.cards[1].narrow('.text-content')`. These are merely references; the test will not look for these elements inside the page until you call `.screenshot()`, `.html()`, or `.text()`, which all return [Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
+
+-   **Browser Integrations**: Hass Taste Test only requires a browser for working with cards in the dashboard; Home Assistant is configured entirely through the REST API. If you'd like to use the Dashboard card methods, you'll need to pass a browser integration instance to the `browser` option when configuring a `HomeAssistant` object.
+
+    Currently only [Playwright](https://playwright.dev) is supported, but you can write your own for other tools.
+
+## Best practices
+
+1. Use a unique entity in each test function. Rather than turn on `input_boolean.test` in test function #1 then screenshot the card with the same entity in test function #2, combine both into one function or create two inputs and turn on `input_boolean.test1` in test function #1 then screenshot the card with `input_boolean.test2` in test function #2.
+
+    If you need an easy way of creating multiple copies of entities, use [YAML anchors](https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/) or the `multiply` function:
+
+    ```javascript
+    const { HomeAssistant, PlaywrightBrowser } = require('hass-taste-test')
+    const { toMatchImageSnapshot } = require('jest-image-snapshot')
+
+    expect.extend({ toMatchImageSnapshot })
+
+    const CONFIGURATION_YAML = `
+    input_boolean:
+    ${multiply(10, (i) => `
+      test${i}:
+        name: Test number ${i}
+    1)}
+    `
+
+    // Now you have `test1`, `test2`, … `test10`
+    ```
+
+2. Use `await dashboard.openInBrowser()` for debugging. This method opens a browser on the current page and pauses your test until you close the browser.
+
+    To inspect network requests as the page first loads, use the snippet below. Make sure to either comment out `hass.close()` so Home Assistant doesn't quit, or provide a suitable delay and increase the test timeout.
+
+    ```javascript
+    console.log(await dashboard.link()) // Print dashboard url
+    await new Promise((resolve) => setTimeout(resolve, 5000)) // Wait 5 seconds
+    ```
+
+3. The `dashboard.cards` and `dashboard.cards[0].narrow()` properties return references, and you should treat them as such. You can assign the card element to a variable and reuse it:
+
+    ```javascript
+    const entityRow = dashboard.cards[0].narrow('.text-content')
+
+    t.snapshot(await entityRow.text(), 'Idle state')
+    await t.context.hass.callService('timer', 'start', {}, { entity_id: 'timer.laundry' })
+    t.snapshot(await entityRow.text(), 'Active state')
+    ```
+
+4. If you need access to a custom component, download it in a separate script. I chose not to implement something like HACS because Node.js does not have any unzipping standard tools in its standard library, and I'd like to keep as few dependencies as possible. Besides, if you need a custom component to integrate service floof, you need to be running service floof; and if service floof is not written in Node.js then you are running a script anyways.
+
+    For an example, see the custom component example in the [tests](https://github.com/rianadon/hass-taste-test/tree/main/test) folder.
+
+## Reference
+
+To see examples of these methods in action, see the [tests](https://github.com/rianadon/hass-taste-test/tree/main/test) folder, which has many great examples.
+
+### `HomeAssistant`
+
+#### `constructor(config, option)`
+
+Sets up Home Assistant. Appends the string `config` to the contents of `configuration.yaml`. You can use the following properties of `options` to configure the instance:
+
+| Option             | Description                                                                              | Default     |
+| ------------------ | ---------------------------------------------------------------------------------------- | ----------- |
+| `python`           | Python executable used to create virtual environment                                     | `python3`   |
+| `hassArgs`         | Arguments to pass to the `hass` binary                                                   | `[]`        |
+| `host`             | Host to which the Home Assistant frontend and api will be bound                          | `127.0.0.1` |
+| `port`             | Port used to host the Home Assistant instance. If `null`, an unused port will be chosen. | `null`      |
+| `username`         | Username of the default account                                                          | `dev`       |
+| `password`         | Password of the default account                                                          | `dev`       |
+| `userLanguage`     | Frontend language (specifically, langage of the default account)                         | `en`        |
+| `userDisplayName`  | The default account's name, displayed in the frontend                                    | `Developer` |
+| `customComponents` | Paths to components to place in the `custom_components` folder                           | `[]`        |
+| `browser`          | Browser integration to use for interacting with dashboard cards                          | `undefined` |
+
+#### `async start()`
+
+Configures, starts, and connects to the Home Assistant instance.
+
+#### `ws`
+
+The Home Assistant websocket. This is an instance of [`home-assistant-js-websocket`](https://github.com/home-assistant/home-assistant-js-websocket). Of instance might be `await ws.sendMessagePromise(message)`, which sends a message over the websocket api and returns the response.
+
+#### `link`
+
+Returns an authenticated link (i.e. it will log you in when you visit) to the Home Assistant default dashboard. You can log this url to the console and open it yourself, which may be useful for debugging. Just make sure your test doesn't quit too quickly on you!
+
+#### `customDashboard(path)`
+
+Returns an authenticated link (i.e. it will log you in when you visit) to a custom dashboard, given its path (looks something like `lovelace-test`).
+
+#### `async post(url, body, authorize=false)`
+
+Sends a JSON POST request over the REST API. Really only useful internally, but if you need this method you'll likeley want to set `authorize` to `true` so you send requests as an authenticated user.
+
+#### `async addIntegration(name)`
+
+Adds / configures an integration.
+
+#### `async addResource(filename, resourceType)`
+
+Adds a Lovelace resource. For a custom card, `resourceType` should be `module`.
+
+#### `async callService(domain, service, serviceData, target)`
+
+Self-explanatory. Calls a service. This is the method you're looking for.
+
+#### `async createDashboard(options)`
+
+More for internal use, but this method allows you to create a dashboard and manually specify the name, icon, path, and title. Returns the dashboard path.
+
+#### `async setDashboardView(path, config)`
+
+Configure a dashboard. Pass in the cards you'd like to add in config. Path should look something like `lovelace-test`.
+
+#### `async Dashboard(config, options)`
+
+Creates and configures a dashboard using `createDashboard` and `setDashboardView`, then opens the page in the browser and returns a Dashboard object.
+
+Cards should be listed in `config`, and options allows you to set:
+
+-   `colorScheme`: Can be `light` or `dark` to use the page's light or dark theme
+-   That's all!
+
+#### `async close`
+
+Cleans up connecions and stops the Home Asssistant server.
+
+### `HomeAsssistant.HassDashboard`
+
+#### `async link()`
+
+Generates a link to the dashboard that will log you in. You can log this url to the console and open it yourself, which may be useful for debugging. Just make sure your test doesn't quit too quickly on you!
+
+#### `async openInBrowser()`
+
+Opens the dashboard in a non-headless version of the browser you configured the `HomeAssistant` to use. **Very useful for debugging**, especially if you like using the developer tools. The returned promise will resolve once you close the browser tab.
+
+#### `async cards[n].element()`
+
+Returns the browser element for the card. In the case of Playwright, this is a `ElementHandle`, which allows you to simulate clicks, listen for events, etc.
+
+#### `async cards[n].text()`
+
+Returns the card element's trimmed `textContent`
+
+#### `async cards[n].screenshot()`
+
+Returns a Buffer containing image data for the card's screenshot.
+
+#### `async cards[n].html(options)`
+
+Returns normalized HTML for of the card. This differs from `outerHTML` in that:
+
+-   Traversal crosses Shadow DOM boundaries
+-   Polymer and Lit properties are included as attributes
+-   Indentation is normalized
+-   Attributes are sorted by name, and you can ignore attributes (`options.ignoreAttributes`)
+-   Script and style tags are not included (`options.ignoreTags`)
+-   The children of Common Home Assistant elements are not included (`options.ignoreChildren` for descendants, `options.ignoreShadowChildren` for Shadow DOM children)
+-   Empty and undefined attributes are not included

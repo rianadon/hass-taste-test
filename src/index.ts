@@ -221,7 +221,7 @@ export class HomeAssistant<E> {
         })
 
     /** Complete onboarding and fetch short-lived access token */
-    async onboard() {
+    private async onboard() {
         const login = await this.post('/api/onboarding/users', {
             language: this.options.userLanguage,
             name: this.options.userDisplayName,
@@ -242,17 +242,17 @@ export class HomeAssistant<E> {
         this.accessCode = response.auth_code
     }
 
-    get url() {
+    private get url() {
         return `http://${this.options.host}:${this.chosenPort}`
     }
-    get clientId() {
+    private get clientId() {
         return this.url + '/'
     }
-    get link() {
+    public get link() {
         return this.customDashboard('')
     }
 
-    public customDashboard(name: string, code = this.accessCode) {
+    public customDashboard(path: string, code = this.accessCode) {
         if (!code)
             throw new Error(
                 'You have not logged into Home Assistant yet. Have you called hasstest.start()?'
@@ -260,12 +260,12 @@ export class HomeAssistant<E> {
         const state = Buffer.from(
             JSON.stringify({ hassUrl: this.url, clientId: this.clientId })
         ).toString('base64')
-        return `${this.url}/${name}?auth_callback=1&code=${encodeURIComponent(
+        return `${this.url}/${path}?auth_callback=1&code=${encodeURIComponent(
             code
         )}&state=${encodeURIComponent(state)}`
     }
 
-    async post(url: string, body: any, authorize = false) {
+    public async post(url: string, body: any, authorize = false) {
         const response = await fetch(this.url + url, {
             method: 'post',
             headers: {
@@ -278,7 +278,7 @@ export class HomeAssistant<E> {
     }
 
     /** Fetch a access code from username and password */
-    async fetchLoginCode() {
+    private async fetchLoginCode() {
         const login = await this.post('/auth/login_flow', {
             handler: ['homeassistant', null],
             redirect_uri: this.url + '/?auth_callback=1',
@@ -291,10 +291,10 @@ export class HomeAssistant<E> {
     }
 
     /** Login and create tokens and websocket */
-    async login() {
-        this.accessCode = await this.fetchLoginCode()
-        await this.launchWebsocket(this.accessCode)
-    }
+    // private async login() {
+    //     this.accessCode = await this.fetchLoginCode()
+    //     await this.launchWebsocket(this.accessCode)
+    // }
 
     private async launchWebsocket(code: string) {
         const params = new URLSearchParams()
@@ -346,7 +346,7 @@ export class HomeAssistant<E> {
         })
     }
 
-    async createDashboard(options?: Partial<LovelaceDashboardCreateParams>) {
+    public async createDashboard(options?: Partial<LovelaceDashboardCreateParams>) {
         if (!this.ws)
             throw new Error('Hass-test has not yet been initialized. Did you call hass.start()?')
         const id = ++this.dashboards
