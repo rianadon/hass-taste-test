@@ -22,7 +22,7 @@
 
 _Hass Taste Test is not developed or maintained by the authors of Home Assistant, and it is currently in prerelease so the API may change. Use at your own risk._
 
-Jump to: [Quickstart](#quickstart) | [Visual Regression Testing](#why-visual-regression-testing) | [Concepts](#important-concepts) | [Best Practices](#best-practices) | [Reference](#reference)
+Jump to: [Quickstart](#quickstart) | [Visual Regression Testing](#why-visual-regression-testing) | [Concepts](#important-concepts) | [Best Practices](#best-practices-and-advice) | [Reference](#reference)
 
 ## Quickstart
 
@@ -36,7 +36,13 @@ I recommend using either [Jest](https://jestjs.io) or [AVA](https://avajs.dev) f
 npm install --save-dev hass-taste-test jest jest-image-snapshot playwright
 ```
 
-2. Create a tests directory `__tests__` and create a file within it: `__tests__/card.test.js`. Add this code:
+2. Verify that Hass Taste Test can download and run Home Assistant:
+
+```bash
+npx hass-taste-test
+```
+
+3. Create a tests directory `__tests__` and create a file within it: `__tests__/card.test.js`. Add this code:
 
 ```javascript
 const { HomeAssistant, PlaywrightBrowser } = require('hass-taste-test')
@@ -71,9 +77,9 @@ it('Custom Card', async () => {
 })
 ```
 
-3. Run your tests with `npx jest`! You can also run Jest in watch mode (`npx jest --watch`)
+4. Run your tests with `npx jest`! You can also run Jest in watch mode (`npx jest --watch`)
 
-4. When you change the interface of your card, update your snapshots using `npx jest -u`. Even better, install Jest globally (`npm install -g jest`)—then you don't need to use `npx` and can run `jest -u`.
+5. When you change the interface of your card, update your snapshots using `npx jest -u`. Even better, install Jest globally (`npm install -g jest`)—then you don't need to use `npx` and can run `jest -u`.
 
 You may now consider customizing your Jest configuration using (`npx jest --init`), [learning more about Jest](https://jestjs.io/docs/getting-started), and browsing through the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test)
 
@@ -119,17 +125,14 @@ What if visual regression testing is not for me?
 
     Currently only [Playwright](https://playwright.dev) is supported, but you can write your own for other tools.
 
-## Best practices
+## Best practices and advice
 
 1. Use a unique entity in each test function. Rather than turn on `input_boolean.test` in test function #1 then screenshot the card with the same entity in test function #2, combine both into one function or create two inputs and turn on `input_boolean.test1` in test function #1 then screenshot the card with `input_boolean.test2` in test function #2.
 
     If you need an easy way of creating multiple copies of entities, use [YAML anchors](https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/) or the `multiply` function:
 
     ```javascript
-    const { HomeAssistant, PlaywrightBrowser } = require('hass-taste-test')
-    const { toMatchImageSnapshot } = require('jest-image-snapshot')
-
-    expect.extend({ toMatchImageSnapshot })
+    const { multiply, HomeAssistant, PlaywrightBrowser } = require('hass-taste-test')
 
     const CONFIGURATION_YAML = `
     input_boolean:
@@ -165,6 +168,12 @@ What if visual regression testing is not for me?
 
     For an example, see the custom component example in the [tests](https://github.com/rianadon/hass-taste-test/tree/main/test) folder.
 
+5. The quickstart provided will work well for testing locally on your computer, but the screenshots are not consistent across browsers and even different operating systems. So if you set up a CI job for your tests, your `toMatchImageSnapshot()` assertions will likeley fail.
+
+    I recommend considerably increasing the threshold for accepting two images as the same (5% is good) as well as adding blur. These measures ignore browser quirks but miss small textual changes. To ensure your text remains consistent, I use a [custom matcher](https://github.com/rianadon/timer-bar-card/blob/d02982f09ca809195d9c6dbff08201a19b24c9d1/test/util.ts#L53-L73) in my components to test check the HTML and the screenshot at once, and recommend you do the same.
+
+6. If you are running on a CI server, setting up Home Assistant can take some time. To avoid having to set your test timeouts higher than the sky, set your `npm test` script to `hass-taste-test && jest` or ensure `npx hass-taste-test` is run before `npm test`.
+
 ## Reference
 
 To see examples of these methods in action, see the [tests](https://github.com/rianadon/hass-taste-test/tree/main/test) folder, which has many great examples.
@@ -194,7 +203,7 @@ UNTESTED! Connects to an existing Home Assistant instance. The `option` argument
 
 #### `ws`
 
-The Home Assistant websocket. This is an instance of [`home-assistant-js-websocket`](https://github.com/home-assistant/home-assistant-js-websocket). Of instance might be `await ws.sendMessagePromise(message)`, which sends a message over the websocket api and returns the response.
+The Home Assistant websocket. This is an instance of [`home-assistant-js-websocket`](https://github.com/home-assistant/home-assistant-js-websocket). Of interest might be `await ws.sendMessagePromise(message)`, which sends a message over the websocket api and returns the response.
 
 #### `link`
 
@@ -222,11 +231,11 @@ Self-explanatory. Calls a service. This is the method you're looking for.
 
 #### `async createDashboard(options)`
 
-More for internal use, but this method allows you to create a dashboard and manually specify the name, icon, path, and title. Returns the dashboard path.
+(More for internal use) Create a dashboards, and you can manually specify the name, icon, path, and title. Returns the dashboard path.
 
 #### `async setDashboardView(path, config)`
 
-Configure a dashboard. Pass in the cards you'd like to add in config. Path should look something like `lovelace-test`.
+(More for internal use) Configure a dashboard. Pass in the cards you'd like to add in config. Path should look something like `lovelace-test`.
 
 #### `async Dashboard(config, options) -> HomeAssistant.HassDashboard`
 
@@ -239,7 +248,7 @@ Cards should be listed in `config`, and options allows you to set:
 
 #### `async close()`
 
-Cleans up connecions and stops the Home Asssistant server.
+Cleans up connections and stops the Home Asssistant server.
 
 ### `HomeAsssistant.HassDashboard`
 
