@@ -190,6 +190,7 @@ export class HomeAssistant<E> {
         const installed = await this.hassVersion()
 
         if (!installed || installed !== this.cache.latestHass) {
+            await exec(this.path_pip(), ['install', '--upgrade', 'wheel'])
             await exec(this.path_pip(), ['install', '--upgrade', 'homeassistant'])
         }
     }
@@ -430,7 +431,7 @@ export class HomeAssistant<E> {
 
         constructor(
             public parent: HomeAssistant<E>,
-            public name: string,
+            public path: string,
             config: object[],
             page: BrowserPage<E>
         ) {
@@ -441,7 +442,7 @@ export class HomeAssistant<E> {
 
         async link() {
             const code = await this.parent.fetchLoginCode()
-            return this.parent.customDashboard(this.name, code)
+            return this.parent.customDashboard(this.path, code)
         }
 
         async openInBrowser() {
@@ -457,7 +458,7 @@ export class HassCard<E> {
         this.selectors = selectors || []
     }
 
-    private async element() {
+    public async element() {
         let el = await this.page.getNthCard(this.n)
         for (const sel of this.selectors) {
             const element = await this.page.find(el, sel)
