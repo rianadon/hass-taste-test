@@ -1,15 +1,15 @@
 {
     "name": "hass-taste-test",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Integration testing for Home Assistant cards",
     "main": "lib/index.js",
     "scripts": {
         "test": "jest && ava",
         "prepare": "husky install"
     },
-  "bin": {
-    "hass-taste-test": "lib/bin.js"
-  },
+    "bin": {
+        "hass-taste-test": "lib/bin.js"
+    },
     "author": "rianadon",
     "homepage": "https://github.com/rianadon/hass-taste-test#readme",
     "license": "AGPL-3.0-or-later",
@@ -61,6 +61,6 @@
         ]
     },
     "lint-staged": {
-        "*.{ts,js,css,md}": "prettier --write"
+        "*.{ts,js,json,css,md}": "prettier --write"
     }
 }
