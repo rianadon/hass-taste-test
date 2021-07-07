@@ -120,6 +120,12 @@ export class HomeAssistant<E> {
         this.process = spawn(this.path_hass(), ['-c', this.configDir, ...this.options.hassArgs], {
             stdio: 'inherit',
         })
+        this.process.on('error', (e) => {
+            console.error(
+                `----\nHome Assistant is having trouble starting. This is likely due to a problem with your virtual environment; try removing the venv folder at ${this.venvDir} and re-running hass-taste-test\n---`
+            )
+            throw e
+        })
         while (!(await this.isUp())) await sleep()
         await this.onboard()
     }
@@ -472,7 +478,7 @@ export class HassCard<E> {
         return new HassCard<E>(this.n, this.page, [...this.selectors, selector])
     }
 
-    public async html(options?: DiffOptions) {
+    public async html(options?: Partial<DiffOptions>) {
         return await this.page.shadowHTML(await this.element(), options)
     }
 

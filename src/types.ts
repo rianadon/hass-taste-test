@@ -34,7 +34,7 @@ export interface BrowserIntegration<E> {
 
 export interface BrowserPage<E> {
     getNthCard(n: number): Promise<E>
-    shadowHTML(element: E, options?: DiffOptions): Promise<string>
+    shadowHTML(element: E, options?: Partial<DiffOptions>): Promise<string>
     textContent(element: E): Promise<string>
     screenshot(element: E): Promise<Buffer>
     find(element: E, selector: string): Promise<E | null | undefined>
