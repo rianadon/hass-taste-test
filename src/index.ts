@@ -133,7 +133,6 @@ export class HomeAssistant<E> {
     /** Write configuration.yaml */
     private async writeYAMLConfiguration(additionalConfig: string) {
         const config = [
-            'recorder:', // Needed so sqlalchemy gets installed.
             'frontend:',
             'http:',
             `  server_host: ${this.options.host}`,
