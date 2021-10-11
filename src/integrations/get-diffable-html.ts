@@ -128,7 +128,9 @@ function getDiffableHTML(container: Node, options?: DiffOptions): string {
                 children = [...node.shadowRoot.childNodes, ...children]
 
             return children.filter(
-                (node) => node.nodeType == Node.ELEMENT_NODE || node.nodeType == Node.TEXT_NODE
+                (node) =>
+                    node.nodeType == Node.ELEMENT_NODE ||
+                    (node.nodeType == Node.TEXT_NODE && node.textContent?.trim())
             )
         }
 

@@ -160,7 +160,7 @@ export class HomeAssistant<E> {
         for (let iterations = 0; iterations < 600; iterations++)
             try {
                 return await lockfile.lock(tmpdir(), { lockfilePath: 'hasstest.lock' })
-            } catch (e) {
+            } catch (e: any) {
                 if (e.code !== 'ELOCKED') throw e
                 await sleep()
             }
@@ -216,7 +216,9 @@ export class HomeAssistant<E> {
 
     /** Fetch the latest hass version from pypi */
     private async latestHAVersion(): Promise<string> {
-        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then((r) => r.json())
+        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then(
+            (r) => r.json() as any
+        )
         return latest.info.version
     }
 
@@ -295,7 +297,7 @@ export class HomeAssistant<E> {
             },
             body: JSON.stringify({ client_id: this.clientId, ...body }),
         })
-        return await response.json()
+        return (await response.json()) as any
     }
 
     /** Fetch a access code from username and password */
@@ -326,7 +328,7 @@ export class HomeAssistant<E> {
             method: 'post',
             body: params,
         })
-        const tokens = await response.json()
+        const tokens = (await response.json()) as any
         this.accessToken = tokens.access_token
 
         const auth = new hass.Auth({
