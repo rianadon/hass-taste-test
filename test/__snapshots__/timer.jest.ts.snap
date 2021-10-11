@@ -6,7 +6,7 @@ exports[`Timer element 1`] = `
     <state-badge _showIcon=\\"true\\" class=\\"pointer\\" stateObj=\\"[object Object]\\" tabindex=\\"0\\">
       <ha-icon data-state=\\"idle\\" icon=\\"hass:timer-outline\\" style=\\"\\">…</ha-icon>
     </state-badge>
-    <div class=\\"info pointer text-content\\">
+    <div class=\\"info pointer text-content\\" title=\\"basic\\">
       basic
     </div>
     <slot></slot>

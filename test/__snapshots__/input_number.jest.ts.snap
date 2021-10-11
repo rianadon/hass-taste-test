@@ -11,7 +11,7 @@ exports[`input_number box 1`] = `
             <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
               <ha-icon data-state=\\"30.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
             </state-badge>
-            <div class=\\"info text-content\\">
+            <div class=\\"info text-content\\" title=\\"Numeric Input Box\\">
               Numeric Input Box
             </div>
             <slot></slot>
@@ -38,7 +38,7 @@ exports[`input_number box 2`] = `
             <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
               <ha-icon data-state=\\"5.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
             </state-badge>
-            <div class=\\"info text-content\\">
+            <div class=\\"info text-content\\" title=\\"Numeric Input Box\\">
               Numeric Input Box
             </div>
             <slot></slot>
@@ -65,7 +65,7 @@ exports[`input_number slider 1`] = `
             <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
               <ha-icon data-state=\\"30.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
             </state-badge>
-            <div class=\\"info text-content\\">
+            <div class=\\"info text-content\\" title=\\"Slider\\">
               Slider
             </div>
             <slot></slot>
@@ -95,7 +95,7 @@ exports[`input_number slider 2`] = `
             <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
               <ha-icon data-state=\\"5.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
             </state-badge>
-            <div class=\\"info text-content\\">
+            <div class=\\"info text-content\\" title=\\"Slider\\">
               Slider
             </div>
             <slot></slot>
