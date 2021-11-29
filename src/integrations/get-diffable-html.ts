@@ -30,6 +30,7 @@ interface DiffOptions {
 const DEFAULT_IGNORE_TAGS = ['script', 'style']
 const DEFAULT_IGNORE_SHADOW_CHILDREN = [
     'ha-icon',
+    'ha-state-icon',
     'ha-slider', // Home Assistant elements
     'mwc-button', // Material web components
     'paper-input', // Polymer elements
