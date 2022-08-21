@@ -3,7 +3,7 @@ import { chromium, webkit, firefox } from 'playwright'
 import { readFileSync } from 'fs'
 import { BrowserIntegration, BrowserPage, DashboardOptions, DiffOptions } from '../types'
 
-const htmlScript = readFileSync(__dirname + '/../../lib/integrations/get-diffable-html.js', 'utf-8')
+const htmlScript = readFileSync(__dirname + '/../../node_modules/hass-taste-test/lib/integrations/get-diffable-html.js', 'utf-8')
 
 export type PlaywrightElement = ElementHandle<Node>
 
