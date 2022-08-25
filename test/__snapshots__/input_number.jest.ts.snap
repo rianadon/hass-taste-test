@@ -7,11 +7,11 @@ exports[`input_number box 1`] = `
     <div class=\\"card-content\\" id=\\"states\\">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
-            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
-              <ha-icon data-state=\\"30.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+          <hui-generic-entity-row config=\\"[object Object]\\" hideName=\\"false\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" class=\\"pointer\\" stateObj=\\"[object Object]\\" tabindex=\\"0\\">
+              <ha-state-icon data-state=\\"30.0\\" style=\\"\\">…</ha-state-icon>
             </state-badge>
-            <div class=\\"info text-content\\" title=\\"Numeric Input Box\\">
+            <div class=\\"info pointer text-content\\" title=\\"Numeric Input Box\\">
               Numeric Input Box
             </div>
             <slot></slot>
@@ -34,11 +34,11 @@ exports[`input_number box 2`] = `
     <div class=\\"card-content\\" id=\\"states\\">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
-            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
-              <ha-icon data-state=\\"5.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+          <hui-generic-entity-row config=\\"[object Object]\\" hideName=\\"false\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" class=\\"pointer\\" stateObj=\\"[object Object]\\" tabindex=\\"0\\">
+              <ha-state-icon data-state=\\"5.0\\" style=\\"\\">…</ha-state-icon>
             </state-badge>
-            <div class=\\"info text-content\\" title=\\"Numeric Input Box\\">
+            <div class=\\"info pointer text-content\\" title=\\"Numeric Input Box\\">
               Numeric Input Box
             </div>
             <slot></slot>
@@ -61,11 +61,11 @@ exports[`input_number slider 1`] = `
     <div class=\\"card-content\\" id=\\"states\\">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
-            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
-              <ha-icon data-state=\\"30.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+          <hui-generic-entity-row config=\\"[object Object]\\" hideName=\\"false\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" class=\\"pointer\\" stateObj=\\"[object Object]\\" tabindex=\\"0\\">
+              <ha-state-icon data-state=\\"30.0\\" style=\\"\\">…</ha-state-icon>
             </state-badge>
-            <div class=\\"info text-content\\" title=\\"Slider\\">
+            <div class=\\"info pointer text-content\\" title=\\"Slider\\">
               Slider
             </div>
             <slot></slot>
@@ -91,11 +91,11 @@ exports[`input_number slider 2`] = `
     <div class=\\"card-content\\" id=\\"states\\">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config=\\"[object Object]\\" no-secondary=\\"\\">
-            <state-badge _showIcon=\\"true\\" stateObj=\\"[object Object]\\">
-              <ha-icon data-state=\\"5.0\\" icon=\\"hass:ray-vertex\\" style=\\"\\">…</ha-icon>
+          <hui-generic-entity-row config=\\"[object Object]\\" hideName=\\"false\\" no-secondary=\\"\\">
+            <state-badge _showIcon=\\"true\\" class=\\"pointer\\" stateObj=\\"[object Object]\\" tabindex=\\"0\\">
+              <ha-state-icon data-state=\\"5.0\\" style=\\"\\">…</ha-state-icon>
             </state-badge>
-            <div class=\\"info text-content\\" title=\\"Slider\\">
+            <div class=\\"info pointer text-content\\" title=\\"Slider\\">
               Slider
             </div>
             <slot></slot>
