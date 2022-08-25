@@ -1,11 +1,12 @@
 {
     "name": "hass-taste-test",
-    "version": "0.0.15",
+    "version": "0.1.0",
     "description": "Integration testing for Home Assistant cards",
     "main": "lib/index.js",
     "scripts": {
         "test": "jest && ava",
-        "prepare": "husky install"
+        "prepare": "husky install",
+        "publish": "tsc && npm publish"
     },
     "bin": {
         "hass-taste-test": "lib/bin.js"
