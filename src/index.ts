@@ -117,16 +117,27 @@ export class HomeAssistant<E> {
         await releaseLock()
 
         // Step 3: Start Home Assistant and onboard
-        this.process = spawn(this.path_hass(), ['-c', this.configDir, ...this.options.hassArgs], {
-            stdio: 'inherit',
-        })
+        this.process = spawn(
+            this.path_hass(),
+            ['-c', this.configDir, '-v', ...this.options.hassArgs],
+            {
+                stdio: 'inherit',
+            }
+        )
         this.process.on('error', (e) => {
             console.error(
                 `----\nHome Assistant is having trouble starting. This is likely due to a problem with your virtual environment; try removing the venv folder at ${this.venvDir} and re-running hass-taste-test\n---`
             )
             throw e
         })
-        while (!(await this.isUp())) await sleep()
+        await new Promise<void>(async (resolve, reject) => {
+            // Wait for Home Assistant to start, but quit early if the process exits
+            this.process.on('close', (code) => {
+                if (code != 0) reject(new Error(`Home Assistant exited with code ${code}`))
+            })
+            while (!(await this.isUp())) await sleep()
+            resolve()
+        })
         await this.onboard()
     }
 
