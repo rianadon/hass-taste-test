@@ -83,6 +83,22 @@ it('Custom Card', async () => {
 
 You may now consider customizing your Jest configuration using (`npx jest --init`), [learning more about Jest](https://jestjs.io/docs/getting-started), and browsing through the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test)
 
+## Developing
+
+If you wish to make changes to this repository, follow these instructions. Tests are run with `ts-node`, so no recompilation of typescript is necessary.
+
+1. Install dependencies
+
+```bash
+npm install
+```
+
+2. Run tests
+
+```bash
+npm run test
+```
+
 ### But I want to write my tests in TypeScript
 
 Install [`ts-jest`](https://kulshekhar.github.io/ts-jest/docs/getting-started/installation/), `@types/jest`, and `@types/jest-image-snapshot` along with the other dependencies, then run `npx ts-jest config:init` to configure Jest for Typescript. Browse the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test) for example tests; they are all written in TypeScript.
