@@ -241,7 +241,7 @@ export class HomeAssistant<E> {
         )
         const homeAssistant = libs
             .flat()
-            .map((f) => f.match(/homeassistant-(.*)\.dist-info/))
+            .map((f) => f.match(/^homeassistant-(.*)\.dist-info/))
             .find((f) => f !== null)
         return homeAssistant ? homeAssistant[1] : null
     }
