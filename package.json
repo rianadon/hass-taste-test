@@ -6,7 +6,7 @@
     "scripts": {
         "test": "jest && ava",
         "prepare": "husky install",
-        "publish": "tsc && npm publish"
+        "prepublishOnly": "tsc"
     },
     "bin": {
         "hass-taste-test": "lib/bin.js"
