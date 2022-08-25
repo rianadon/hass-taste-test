@@ -256,12 +256,23 @@ export class HomeAssistant<E> {
 
     /** Complete onboarding and fetch short-lived access token */
     private async onboard() {
-        const login = await this.post('/api/onboarding/users', {
-            language: this.options.userLanguage,
-            name: this.options.userDisplayName,
-            username: this.options.username,
-            password: this.options.password,
-        })
+        let login
+        for (let tries = 0; tries < 20; tries++) {
+            try {
+                login = await this.post('/api/onboarding/users', {
+                    language: this.options.userLanguage,
+                    name: this.options.userDisplayName,
+                    username: this.options.username,
+                    password: this.options.password,
+                })
+                if (login.auth_code) break
+                else await sleep()
+            } catch (e) {
+                console.warn(e)
+                await sleep()
+            }
+        }
+        if (!login.auth_code) throw new Error('No auth code found')
         this.accessCode = login.auth_code
         await this.launchWebsocket(this.accessCode)
 
@@ -321,6 +332,7 @@ export class HomeAssistant<E> {
             username: this.options.username,
             password: this.options.password,
         })
+        if (response.error) throw new Error(`Login code returned with error ${response.error}`)
         return response.result
     }
 
@@ -340,6 +352,7 @@ export class HomeAssistant<E> {
             body: params,
         })
         const tokens = (await response.json()) as any
+        if (tokens.error) throw new Error(`Tokens returned with error ${tokens.error}`)
         this.accessToken = tokens.access_token
 
         const auth = new hass.Auth({
