@@ -100,6 +100,8 @@ npx playwright install-deps
 npm run test
 ```
 
+To update snapshots, use `npx jest -u` and `npx ava -u`.
+
 ### But I want to write my tests in TypeScript
 
 Install [`ts-jest`](https://kulshekhar.github.io/ts-jest/docs/getting-started/installation/), `@types/jest`, and `@types/jest-image-snapshot` along with the other dependencies, then run `npx ts-jest config:init` to configure Jest for Typescript. Browse the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test) for example tests; they are all written in TypeScript.

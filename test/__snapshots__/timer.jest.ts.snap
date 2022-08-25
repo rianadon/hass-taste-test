@@ -9,8 +9,10 @@ exports[`Timer element 1`] = `
     <div class=\\"info pointer text-content\\" title=\\"basic\\">
       basic
     </div>
-    <div class=\\"pointer text-content\\">
-      <slot></slot>
+    <div class=\\"pointer text-content value\\">
+      <div class=\\"state\\">
+        <slot></slot>
+      </div>
     </div>
     <div class=\\"text-content\\">
       Idle
