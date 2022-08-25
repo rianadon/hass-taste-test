@@ -112,8 +112,8 @@ export class HomeAssistant<E> {
         await Promise.all([
             this.findPort().then(() => this.writeYAMLConfiguration(config)),
             this.setupVenv(),
-            fs.writeFile(this.path_cache(), JSON.stringify(this.cache)),
         ])
+        await fs.writeFile(this.path_cache(), JSON.stringify(this.cache))
         await releaseLock()
 
         // Step 3: Start Home Assistant and onboard
