@@ -91,6 +91,7 @@ If you wish to make changes to this repository, follow these instructions. Tests
 
 ```bash
 npm install
+npx playwright install-deps
 ```
 
 2. Run tests
