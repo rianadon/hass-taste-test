@@ -21,6 +21,10 @@ export class PlaywrightBrowser implements BrowserIntegration<PlaywrightElement> 
         this.browserPromise = PlaywrightBrowser.browsers[browserName].launch(options)
     }
 
+    async newPage(browser: Browser | BrowserContext) {
+        return await browser.newPage()
+    }
+
     async open(url: string, options: DashboardOptions) {
         let browser: Browser | BrowserContext = await this.browserPromise
         if (options) {
@@ -28,7 +32,7 @@ export class PlaywrightBrowser implements BrowserIntegration<PlaywrightElement> 
                 colorScheme: options.colorScheme,
             })
         }
-        const page = await browser.newPage()
+        const page = await this.newPage(browser)
         await page.goto(url)
         return new PlaywrightPage(page)
     }
@@ -37,7 +41,7 @@ export class PlaywrightBrowser implements BrowserIntegration<PlaywrightElement> 
         const browser = await PlaywrightBrowser.browsers[this.browserName].launch({
             headless: false,
         })
-        const page = await browser.newPage()
+        const page = await this.newPage(browser)
         await page.goto(url)
         await page.waitForEvent('close', { timeout: 0 })
     }
