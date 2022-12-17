@@ -1,7 +1,7 @@
 import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
-import anyTest, { TestInterface } from 'ava'
+import anyTest, { TestFn } from 'ava'
 
-const test = anyTest as TestInterface<{ hass: HomeAssistant<PlaywrightElement> }>
+const test = anyTest as TestFn<{ hass: HomeAssistant<PlaywrightElement> }>
 
 const CONFIGURATION_YAML = `
 timer:
