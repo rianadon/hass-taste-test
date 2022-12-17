@@ -1,6 +1,6 @@
 {
     "name": "hass-taste-test",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Integration testing for Home Assistant cards",
     "main": "lib/index.js",
     "scripts": {
