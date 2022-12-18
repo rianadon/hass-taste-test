@@ -24,6 +24,7 @@ export interface DiffOptions {
 
 export type DashboardOptions = Partial<{
     colorScheme: 'light' | 'dark' | 'no-preference'
+    title: string
 }>
 
 export interface BrowserIntegration<E> {

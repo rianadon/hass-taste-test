@@ -403,8 +403,8 @@ export class HomeAssistant<E> {
             mode: 'storage',
             require_admin: false,
             show_in_sidebar: true,
-            title: `Dashboard ${id}`,
             ...options,
+            title: options?.title || `Dashboard ${id}`,
         }
         await this.ws.sendMessagePromise(args)
         return args.url_path
@@ -437,7 +437,7 @@ export class HomeAssistant<E> {
             throw new Error(
                 'Cannot launch a dashboard without a browser integration. Make sure to specify options.integration'
             )
-        const dashboard = await this.createDashboard()
+        const dashboard = await this.createDashboard({ title: options?.title })
         await this.setDashboardView(dashboard, config)
         const code = await this.fetchLoginCode()
         const page = await this.options.browser.open(
@@ -465,7 +465,7 @@ export class HomeAssistant<E> {
             public parent: HomeAssistant<E>,
             public path: string,
             config: object[],
-            page: BrowserPage<E>
+            public page: BrowserPage<E>
         ) {
             for (let i = 0; i < config.length; i++) {
                 this.cards.push(new HassCard(i, page))

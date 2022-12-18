@@ -78,4 +78,8 @@ export class PlaywrightPage implements BrowserPage<PlaywrightElement> {
         if (content === null) throw new Error('Element has no textcontent')
         return content
     }
+
+    get playwright() {
+        return this.page
+    }
 }
