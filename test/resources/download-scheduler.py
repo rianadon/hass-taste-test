@@ -3,8 +3,8 @@ import zipfile, tempfile
 import urllib.request
 
 
-COMPONENT_URL = 'https://github.com/nielsfaber/scheduler-component/releases/download/v3.1.3/scheduler.zip'
-CARD_URL = 'https://github.com/nielsfaber/scheduler-card/releases/download/v2.1.4/scheduler-card.js'
+COMPONENT_URL = 'https://github.com/nielsfaber/scheduler-component/releases/download/v3.2.15/scheduler.zip'
+CARD_URL = 'https://github.com/nielsfaber/scheduler-card/releases/download/v3.2.10/scheduler-card.js'
 
 COMPONENT_DIRECTORY = tempfile.gettempdir() + '/scheduler-custom-component'
 CARD_FILE = tempfile.gettempdir() + '/scheduler-custom-card.js'

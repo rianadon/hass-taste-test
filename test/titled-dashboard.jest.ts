@@ -13,6 +13,7 @@ afterAll(async () => await hass.close())
 
 it('Dashboard with custom title', async () => {
     const dashboard = await hass.Dashboard([], { title: 'Custom' })
+    await new Promise((r) => setTimeout(r, 1000)) // Give the page time
     const title = await (dashboard.page as PlaywrightPage).playwright.title()
     expect(title).toBe('Custom – Home Assistant')
 })

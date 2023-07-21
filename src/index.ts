@@ -15,7 +15,7 @@ import {
 } from './types'
 import { BrowserIntegration } from './types'
 import lockfile from 'proper-lockfile'
-import { Collection, entitiesColl, HassEntities } from 'home-assistant-js-websocket'
+import { Collection, subscribeEntities, HassEntities } from 'home-assistant-js-websocket'
 export { PlaywrightBrowser, PlaywrightElement } from './integrations/playwright'
 
 interface HassOptions<E> {
@@ -57,7 +57,7 @@ export class HomeAssistant<E> {
     private accessToken!: string
     private options: HassOptions<E>
     private dashboards = 0
-    private entitiesCollection!: Collection<HassEntities>
+    private entities: HassEntities = {}
 
     public ws!: hass.Connection
 
@@ -367,7 +367,7 @@ export class HomeAssistant<E> {
             auth,
             createSocket: async () => createSocket(auth, false),
         })
-        this.entitiesCollection = entitiesColl(this.ws)
+        subscribeEntities(this.ws, (e) => (this.entities = { ...this.entities, ...e }))
     }
 
     public async addIntegration(name: string) {
@@ -379,6 +379,10 @@ export class HomeAssistant<E> {
             },
             true,
         )
+        if (response.message)
+            throw new Error(
+                `Error configuring ${name} integration. Check the logs: ${response.message}`,
+            )
         if (!response.result) throw new Error('Multi-step integration flows are not yet suppoted')
         return response.result
     }
@@ -451,10 +455,7 @@ export class HomeAssistant<E> {
     }
 
     async states() {
-        console.log(this.entitiesCollection.state)
-        // this.entitiesCollection = entitiesColl(this.ws);
-        await this.entitiesCollection.refresh()
-        return this.entitiesCollection.state
+        return this.entities
     }
 
     /** Clean up connections and stop the HomeAssistant server */
