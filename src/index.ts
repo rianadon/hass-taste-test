@@ -15,6 +15,7 @@ import {
 } from './types'
 import { BrowserIntegration } from './types'
 import lockfile from 'proper-lockfile'
+import { Collection, entitiesColl, HassEntities } from 'home-assistant-js-websocket'
 export { PlaywrightBrowser, PlaywrightElement } from './integrations/playwright'
 
 interface HassOptions<E> {
@@ -56,6 +57,7 @@ export class HomeAssistant<E> {
     private accessToken!: string
     private options: HassOptions<E>
     private dashboards = 0
+    private entitiesCollection!: Collection<HassEntities>
 
     public ws!: hass.Connection
 
@@ -365,6 +367,8 @@ export class HomeAssistant<E> {
             auth,
             createSocket: async () => createSocket(auth, false),
         })
+        console.log('VERSION IS', this.ws.haVersion)
+        this.entitiesCollection = entitiesColl(this.ws)
     }
 
     public async addIntegration(name: string) {
@@ -445,6 +449,13 @@ export class HomeAssistant<E> {
             options || {}
         )
         return new this.HassDashboard(this, dashboard, config, page)
+    }
+
+    async states() {
+        console.log(this.entitiesCollection.state)
+        // this.entitiesCollection = entitiesColl(this.ws);
+        // await this.entitiesCollection.refresh();
+        return this.entitiesCollection.state
     }
 
     /** Clean up connections and stop the HomeAssistant server */

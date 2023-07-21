@@ -21,6 +21,10 @@ const ERR_INVALID_AUTH = 2
 
 const DEBUG = false
 
+interface HaWebSocket extends WebSocket {
+    haVersion: string
+}
+
 export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<any> {
     // Convert from http:// -> ws://, https:// -> wss://
     const url = auth.wsUrl
@@ -40,7 +44,7 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
 
         const socket = new WebSocket(url, {
             rejectUnauthorized: !ignoreCertificates,
-        })
+        }) as HaWebSocket
 
         // If invalid auth, we will not try to reconnect.
         let invalidAuth = false
@@ -127,6 +131,7 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
                     socket.removeEventListener('message', handleMessage)
                     socket.removeEventListener('close', closeMessage)
                     socket.removeEventListener('error', errorMessage)
+                    socket.haVersion = message.ha_version
                     promResolve(socket)
                     break
 

@@ -23,6 +23,7 @@ test('light theme', async (t) => {
         { type: 'sensor', entity: 'sensor.test_sensor' },
     ])
 
+    t.is((await t.context.hass.states())['sensor.test_sensor'].state, '42')
     t.snapshot(await dashboard.cards[0].html())
 })
 
@@ -32,5 +33,6 @@ test('dark theme', async (t) => {
         { colorScheme: 'dark' }
     )
 
+    t.is((await t.context.hass.states())['sensor.test_sensor'].state, '42')
     t.snapshot(await dashboard.cards[0].html())
 })
