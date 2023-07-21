@@ -210,7 +210,7 @@ export class HomeAssistant<E> {
 
         if (!installed || installed !== this.cache.latestHass) {
             await exec(this.path_pip(), ['install', '--upgrade', 'wheel'])
-            await exec(this.path_pip(), ['install', '--upgrade', 'homeassistant'])
+            await exec(this.path_pip(), ['install', '--upgrade', 'mutagen', 'homeassistant'])
         }
     }
 
