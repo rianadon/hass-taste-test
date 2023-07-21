@@ -124,11 +124,11 @@ export class HomeAssistant<E> {
             ['-c', this.configDir, '-v', ...this.options.hassArgs],
             {
                 stdio: 'inherit',
-            }
+            },
         )
         this.process.on('error', (e) => {
             console.error(
-                `----\nHome Assistant is having trouble starting. This is likely due to a problem with your virtual environment; try removing the venv folder at ${this.venvDir} and re-running hass-taste-test\n---`
+                `----\nHome Assistant is having trouble starting. This is likely due to a problem with your virtual environment; try removing the venv folder at ${this.venvDir} and re-running hass-taste-test\n---`,
             )
             throw e
         })
@@ -162,9 +162,9 @@ export class HomeAssistant<E> {
                 fs.symlink(
                     component,
                     join(this.path_componentsDir(), basename(component)),
-                    'junction'
-                )
-            )
+                    'junction',
+                ),
+            ),
         )
     }
 
@@ -230,7 +230,7 @@ export class HomeAssistant<E> {
     /** Fetch the latest hass version from pypi */
     private async latestHAVersion(): Promise<string> {
         const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then(
-            (r) => r.json() as any
+            (r) => r.json() as any,
         )
         return latest.info.version
     }
@@ -239,7 +239,7 @@ export class HomeAssistant<E> {
     private async hassVersion(): Promise<string | null> {
         const libFolders = await fs.readdir(join(this.venvDir, 'lib'))
         const libs = await Promise.all(
-            libFolders.map((f) => fs.readdir(join(this.venvDir, 'lib', f, 'site-packages')))
+            libFolders.map((f) => fs.readdir(join(this.venvDir, 'lib', f, 'site-packages'))),
         )
         const homeAssistant = libs
             .flat()
@@ -284,7 +284,7 @@ export class HomeAssistant<E> {
         const response = await this.post(
             '/api/onboarding/integration',
             { redirect_uri: this.url + '/?auth_callback=1' },
-            true
+            true,
         )
         this.accessCode = response.auth_code
     }
@@ -302,13 +302,13 @@ export class HomeAssistant<E> {
     public customDashboard(path: string, code = this.accessCode) {
         if (!code)
             throw new Error(
-                'You have not logged into Home Assistant yet. Have you called hasstest.start()?'
+                'You have not logged into Home Assistant yet. Have you called hasstest.start()?',
             )
         const state = Buffer.from(
-            JSON.stringify({ hassUrl: this.url, clientId: this.clientId })
+            JSON.stringify({ hassUrl: this.url, clientId: this.clientId }),
         ).toString('base64')
         return `${this.url}/${path}?auth_callback=1&code=${encodeURIComponent(
-            code
+            code,
         )}&state=${encodeURIComponent(state)}`
     }
 
@@ -367,7 +367,6 @@ export class HomeAssistant<E> {
             auth,
             createSocket: async () => createSocket(auth, false),
         })
-        console.log('VERSION IS', this.ws.haVersion)
         this.entitiesCollection = entitiesColl(this.ws)
     }
 
@@ -378,7 +377,7 @@ export class HomeAssistant<E> {
                 handler: name,
                 show_advanced_options: false,
             },
-            true
+            true,
         )
         if (!response.result) throw new Error('Multi-step integration flows are not yet suppoted')
         return response.result
@@ -431,7 +430,7 @@ export class HomeAssistant<E> {
         domain: string,
         service: string,
         serviceData?: object,
-        target?: hass.HassServiceTarget
+        target?: hass.HassServiceTarget,
     ) {
         return await hass.callService(this.ws, domain, service, serviceData, target)
     }
@@ -439,14 +438,14 @@ export class HomeAssistant<E> {
     async Dashboard(config: object[], options?: DashboardOptions) {
         if (!this.options.browser)
             throw new Error(
-                'Cannot launch a dashboard without a browser integration. Make sure to specify options.integration'
+                'Cannot launch a dashboard without a browser integration. Make sure to specify options.integration',
             )
         const dashboard = await this.createDashboard({ title: options?.title })
         await this.setDashboardView(dashboard, config)
         const code = await this.fetchLoginCode()
         const page = await this.options.browser.open(
             this.customDashboard(dashboard, code),
-            options || {}
+            options || {},
         )
         return new this.HassDashboard(this, dashboard, config, page)
     }
@@ -454,7 +453,7 @@ export class HomeAssistant<E> {
     async states() {
         console.log(this.entitiesCollection.state)
         // this.entitiesCollection = entitiesColl(this.ws);
-        // await this.entitiesCollection.refresh();
+        await this.entitiesCollection.refresh()
         return this.entitiesCollection.state
     }
 
@@ -476,7 +475,7 @@ export class HomeAssistant<E> {
             public parent: HomeAssistant<E>,
             public path: string,
             config: object[],
-            public page: BrowserPage<E>
+            public page: BrowserPage<E>,
         ) {
             for (let i = 0; i < config.length; i++) {
                 this.cards.push(new HassCard(i, page))
@@ -497,7 +496,11 @@ export class HomeAssistant<E> {
 export class HassCard<E> {
     private selectors: string[]
 
-    constructor(private n: number, private page: BrowserPage<E>, selectors?: string[]) {
+    constructor(
+        private n: number,
+        private page: BrowserPage<E>,
+        selectors?: string[],
+    ) {
         this.selectors = selectors || []
     }
 
