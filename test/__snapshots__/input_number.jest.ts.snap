@@ -7,8 +7,8 @@ exports[`input_number box 1`] = `
     <div class="card-content" id="states">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config="[object Object]" hideName="false" no-secondary="">
-            <state-badge _showIcon="true" class="pointer" stateObj="[object Object]" tabindex="0">
+          <hui-generic-entity-row hideName="false" no-secondary="">
+            <state-badge class="pointer" icon="true" tabindex="0">
               <ha-state-icon data-domain="input_number" data-state="30.0" style="">…</ha-state-icon>
             </state-badge>
             <div class="info pointer text-content" title="Numeric Input Box">
@@ -16,7 +16,7 @@ exports[`input_number box 1`] = `
             </div>
             <slot></slot>
             <div class="flex state">
-              <ha-textfield autocapitalize="" autoValidate="false" charCounter="false" disabled="false" endAligned="false" helper="" helperPersistent="false" icon="" iconTrailing="" label="" max="35" maxLength="-1" min="-20" minLength="-1" name="" outlined="false" pattern="[0-9]+([\\.][0-9]+)?" placeholder="" prefix="" readOnly="false" required="false" size="null" step="1" suffix="" type="number" validateOnInitialRender="false" validationMessage="" value="30">
+              <ha-textfield autocapitalize="" autoValidate="false" charCounter="false" disabled="false" endAligned="false" helper="" helperPersistent="false" icon="false" iconTrailing="false" invalid="false" label="" max="35" maxLength="-1" min="-20" minLength="-1" name="" outlined="false" pattern="[0-9]+([\\.][0-9]+)?" placeholder="" prefix="" readOnly="false" required="false" size="null" step="1" suffix="" type="number" validateOnInitialRender="false" validationMessage="" value="30">
                 <label class="mdc-text-field mdc-text-field--filled mdc-text-field--no-label">
                   <span class="mdc-text-field__ripple"></span>
                   <input class="mdc-text-field__input" max="35" min="-20" pattern="[0-9]+([\\.][0-9]+)?" placeholder="" step="1" type="number">
@@ -40,8 +40,8 @@ exports[`input_number box 2`] = `
     <div class="card-content" id="states">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config="[object Object]" hideName="false" no-secondary="">
-            <state-badge _showIcon="true" class="pointer" stateObj="[object Object]" tabindex="0">
+          <hui-generic-entity-row hideName="false" no-secondary="">
+            <state-badge class="pointer" icon="true" tabindex="0">
               <ha-state-icon data-domain="input_number" data-state="5.0" style="">…</ha-state-icon>
             </state-badge>
             <div class="info pointer text-content" title="Numeric Input Box">
@@ -49,7 +49,7 @@ exports[`input_number box 2`] = `
             </div>
             <slot></slot>
             <div class="flex state">
-              <ha-textfield autocapitalize="" autoValidate="false" charCounter="false" disabled="false" endAligned="false" helper="" helperPersistent="false" icon="" iconTrailing="" label="" max="35" maxLength="-1" min="-20" minLength="-1" name="" outlined="false" pattern="[0-9]+([\\.][0-9]+)?" placeholder="" prefix="" readOnly="false" required="false" size="null" step="1" suffix="" type="number" validateOnInitialRender="false" validationMessage="" value="5">
+              <ha-textfield autocapitalize="" autoValidate="false" charCounter="false" disabled="false" endAligned="false" helper="" helperPersistent="false" icon="false" iconTrailing="false" invalid="false" label="" max="35" maxLength="-1" min="-20" minLength="-1" name="" outlined="false" pattern="[0-9]+([\\.][0-9]+)?" placeholder="" prefix="" readOnly="false" required="false" size="null" step="1" suffix="" type="number" validateOnInitialRender="false" validationMessage="" value="5">
                 <label class="mdc-text-field mdc-text-field--filled mdc-text-field--no-label">
                   <span class="mdc-text-field__ripple"></span>
                   <input class="mdc-text-field__input" max="35" min="-20" pattern="[0-9]+([\\.][0-9]+)?" placeholder="" step="1" type="number">
@@ -73,8 +73,8 @@ exports[`input_number slider 1`] = `
     <div class="card-content" id="states">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config="[object Object]" hideName="false" no-secondary="">
-            <state-badge _showIcon="true" class="pointer" stateObj="[object Object]" tabindex="0">
+          <hui-generic-entity-row hideName="false" no-secondary="">
+            <state-badge class="pointer" icon="true" tabindex="0">
               <ha-state-icon data-domain="input_number" data-state="30.0" style="">…</ha-state-icon>
             </state-badge>
             <div class="info pointer text-content" title="Slider">
@@ -82,7 +82,7 @@ exports[`input_number slider 1`] = `
             </div>
             <slot></slot>
             <div class="flex">
-              <ha-slider aria-disabled="false" aria-valuemax="35" aria-valuemin="-20" aria-valuenow="30" dir="ltr" editable="false" ignore-bar-touch="" ignoreBarTouch="true" maxMarkers="0" pin="true" role="slider" secondaryProgress="0" snaps="false" tabindex="0" value="30">…</ha-slider>
+              <ha-slider ariaLabelEnd="" ariaLabelStart="" ariaValueTextEnd="" ariaValueTextStart="" dir="ltr" disabled="false" labeled="true" max="35" min="-20" name="" range="false" role="presentation" step="1" ticks="false" value="30.0" valueLabel="" valueLabelEnd="" valueLabelStart="">…</ha-slider>
               <span class="state">
                 30
               </span>
@@ -103,8 +103,8 @@ exports[`input_number slider 2`] = `
     <div class="card-content" id="states">
       <div>
         <hui-input-number-entity-row>
-          <hui-generic-entity-row config="[object Object]" hideName="false" no-secondary="">
-            <state-badge _showIcon="true" class="pointer" stateObj="[object Object]" tabindex="0">
+          <hui-generic-entity-row hideName="false" no-secondary="">
+            <state-badge class="pointer" icon="true" tabindex="0">
               <ha-state-icon data-domain="input_number" data-state="5.0" style="">…</ha-state-icon>
             </state-badge>
             <div class="info pointer text-content" title="Slider">
@@ -112,7 +112,7 @@ exports[`input_number slider 2`] = `
             </div>
             <slot></slot>
             <div class="flex">
-              <ha-slider aria-disabled="false" aria-valuemax="35" aria-valuemin="-20" aria-valuenow="5" dir="ltr" editable="false" ignore-bar-touch="" ignoreBarTouch="true" maxMarkers="0" pin="true" role="slider" secondaryProgress="0" snaps="false" tabindex="0" value="5">…</ha-slider>
+              <ha-slider ariaLabelEnd="" ariaLabelStart="" ariaValueTextEnd="" ariaValueTextStart="" dir="ltr" disabled="false" labeled="true" max="35" min="-20" name="" range="false" role="presentation" step="1" ticks="false" value="5.0" valueLabel="" valueLabelEnd="" valueLabelStart="">…</ha-slider>
               <span class="state">
                 5
               </span>
