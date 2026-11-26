@@ -58,6 +58,7 @@ export class HomeAssistant<E> {
     private options: HassOptions<E>
     private dashboards = 0
     private entities: HassEntities = {}
+    private started = false
 
     public ws!: hass.Connection
 
@@ -122,10 +123,12 @@ export class HomeAssistant<E> {
         this.process = spawn(
             this.path_hass(),
             ['-c', this.configDir, '-v', ...this.options.hassArgs],
-            {
-                stdio: 'inherit',
-            },
+            { stdio: 'pipe' },
         )
+        this.process.stderr!.on('data', (d) => {
+            if (d.includes('Starting Home Assistant')) this.started = true
+            process.stderr.write(d)
+        })
         this.process.on('error', (e) => {
             console.error(
                 `----\nHome Assistant is having trouble starting. This is likely due to a problem with your virtual environment; try removing the venv folder at ${this.venvDir} and re-running hass-taste-test\n---`,
@@ -137,7 +140,7 @@ export class HomeAssistant<E> {
             this.process.on('close', (code) => {
                 if (code != 0) reject(new Error(`Home Assistant exited with code ${code}`))
             })
-            while (!(await this.isUp())) await sleep()
+            while (!this.started || !(await this.isUp())) await sleep()
             resolve()
         })
         await this.onboard()
@@ -146,6 +149,7 @@ export class HomeAssistant<E> {
     /** Write configuration.yaml */
     private async writeYAMLConfiguration(additionalConfig: string) {
         const config = [
+            'default_config:',
             'frontend:',
             'http:',
             `  server_host: ${this.options.host}`,
@@ -210,7 +214,7 @@ export class HomeAssistant<E> {
 
         if (!installed || installed !== this.cache.latestHass) {
             await exec(this.path_pip(), ['install', '--upgrade', 'wheel'])
-            await exec(this.path_pip(), ['install', '--upgrade', 'mutagen', 'homeassistant'])
+            await exec(this.path_pip(), ['install', '--upgrade', 'homeassistant'])
         }
     }
 
