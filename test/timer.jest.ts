@@ -1,4 +1,4 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
 const CONFIGURATION_YAML = `

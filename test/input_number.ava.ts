@@ -1,5 +1,5 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
-import anyTest, { TestFn } from 'ava'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
+import anyTest, { type TestFn } from 'ava'
 
 const test = anyTest as TestFn<{ hass: HomeAssistant<PlaywrightElement> }>
 
@@ -37,7 +37,7 @@ test('input_number slider', async (t) => {
         'input_number',
         'set_value',
         { value: 5 },
-        { entity_id: 'input_number.slider1' }
+        { entity_id: 'input_number.slider1' },
     )
     t.snapshot(await dashboard.cards[0].html())
 })
@@ -51,7 +51,7 @@ test('input_number box', async (t) => {
         'input_number',
         'set_value',
         { value: 5 },
-        { entity_id: 'input_number.box1' }
+        { entity_id: 'input_number.box1' },
     )
     t.snapshot(await dashboard.cards[0].html())
 })

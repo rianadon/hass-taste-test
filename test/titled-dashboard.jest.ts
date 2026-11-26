@@ -1,5 +1,5 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
-import { PlaywrightPage } from '../src/integrations/playwright'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
+import type { PlaywrightPage } from '../src/integrations/playwright.ts'
 
 let hass: HomeAssistant<PlaywrightElement>
 
@@ -13,7 +13,9 @@ afterAll(async () => await hass.close())
 
 it('Dashboard with custom title', async () => {
     const dashboard = await hass.Dashboard([], { title: 'Custom' })
-    await new Promise((r) => setTimeout(r, 1000)) // Give the page time
-    const title = await (dashboard.page as PlaywrightPage).playwright.title()
+    const page = (dashboard.page as PlaywrightPage).playwright
+    // The frontend sets the title once the dashboard loads; wait for it rather than sleeping
+    await page.waitForFunction(() => document.title.startsWith('Custom')).catch(() => {})
+    const title = await page.title()
     expect(title).toBe('Custom – Home Assistant')
 })

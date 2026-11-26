@@ -1,5 +1,5 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
-import anyTest, { TestFn } from 'ava'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
+import anyTest, { type TestFn } from 'ava'
 
 const test = anyTest as TestFn<{ hass: HomeAssistant<PlaywrightElement> }>
 

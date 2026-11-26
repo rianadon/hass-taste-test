@@ -1,10 +1,10 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 import { execFileSync } from 'child_process'
 
 expect.extend({ toMatchImageSnapshot })
 
-const stdout = execFileSync('python3', [__dirname + '/resources/download-scheduler.py'])
+const stdout = execFileSync('python3', [import.meta.dirname + '/resources/download-scheduler.py'])
 const [componentDir, cardFile] = stdout.toString().trim().split(' ')
 
 const CONFIGURATION_YAML = ``

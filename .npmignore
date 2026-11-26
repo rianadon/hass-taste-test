@@ -4,3 +4,4 @@ test
 .husky
 .prettierignore
 tsconfig.json
+tsconfig.*.json

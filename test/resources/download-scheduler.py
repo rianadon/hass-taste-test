@@ -3,11 +3,15 @@ import zipfile, tempfile
 import urllib.request
 
 
-COMPONENT_URL = 'https://github.com/nielsfaber/scheduler-component/releases/download/v3.2.15/scheduler.zip'
-CARD_URL = 'https://github.com/nielsfaber/scheduler-card/releases/download/v3.2.10/scheduler-card.js'
+COMPONENT_VERSION = 'v3.3.9'
+CARD_VERSION = 'v4.0.20'
+COMPONENT_URL = f'https://github.com/nielsfaber/scheduler-component/releases/download/{COMPONENT_VERSION}/scheduler.zip'
+CARD_URL = f'https://github.com/nielsfaber/scheduler-card/releases/download/{CARD_VERSION}/scheduler-card.js'
 
-COMPONENT_DIRECTORY = tempfile.gettempdir() + '/scheduler-custom-component'
-CARD_FILE = tempfile.gettempdir() + '/scheduler-custom-card.js'
+# Cache paths include the version so bumping a version downloads it fresh
+# The component folder must be named after the integration's domain, so the version goes in its parent
+COMPONENT_DIRECTORY = f'{tempfile.gettempdir()}/scheduler-component-{COMPONENT_VERSION}/scheduler'
+CARD_FILE = f'{tempfile.gettempdir()}/scheduler-custom-card-{CARD_VERSION}.js'
 
 if not os.path.exists(COMPONENT_DIRECTORY):
     print('Downloading', COMPONENT_URL, file=sys.stderr)

@@ -1,0 +1,16 @@
+{
+    // The published package is CommonJS so it loads everywhere, including Jest's default
+    // CommonJS mode. The source stays ESM (see tsconfig.json); only the output format differs.
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "declaration": true,
+        "outDir": "lib",
+        "rootDir": "src",
+        "module": "commonjs",
+        "moduleResolution": "node10",
+        "verbatimModuleSyntax": false,
+        "esModuleInterop": true
+    },
+    "include": ["src/**/*"]
+}

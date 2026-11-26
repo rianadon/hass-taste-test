@@ -8,10 +8,10 @@ This is slightly modified version of
 https://github.com/home-assistant/home-assistant-js-websocket/blob/master/lib/socket.ts
 */
 
-import type { Auth } from 'home-assistant-js-websocket/dist/auth'
+import type { Auth } from 'home-assistant-js-websocket'
 
 // eslint-disable-next-line import/order
-import WebSocket = require('ws')
+import WebSocket from 'ws'
 
 const MSG_TYPE_AUTH_REQUIRED = 'auth_required'
 const MSG_TYPE_AUTH_INVALID = 'auth_invalid'
@@ -34,12 +34,12 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
     function connect(
         triesLeft: number,
         promResolve: (socket: any) => void,
-        promReject: (err: number) => void
+        promReject: (err: number) => void,
     ) {
         if (DEBUG)
             console.log(
                 `[Auth Phase] Connecting to Home Assistant... Tries left: ${triesLeft}`,
-                url
+                url,
             )
 
         const socket = new WebSocket(url, {
@@ -80,7 +80,7 @@ export function createSocket(auth: Auth, ignoreCertificates: boolean): Promise<a
         const closeOrError = (errorText?: string) => {
             if (errorText) {
                 console.error(
-                    `WebSocket Connection to Home Assistant closed with an error: ${errorText}`
+                    `WebSocket Connection to Home Assistant closed with an error: ${errorText}`,
                 )
             }
             if (invalidAuth) {

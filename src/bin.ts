@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { HomeAssistant } from './'
+import { HomeAssistant } from './index.ts'
 ;(async () => {
     console.log('Ensuring Home Assistant packages are installed...')
     const hass = await HomeAssistant.create('recorder:', {})

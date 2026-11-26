@@ -1,4 +1,4 @@
-interface IgnoreAttributesForTags {
+export interface IgnoreAttributesForTags {
     /** tags on which to ignore the given attributes */
     tags: string[]
     /** attributes to ignore for the given tags */

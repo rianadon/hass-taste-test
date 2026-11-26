@@ -1,5 +1,5 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
-import anyTest, { TestFn } from 'ava'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
+import anyTest, { type TestFn } from 'ava'
 
 const test = anyTest as TestFn<{ hass: HomeAssistant<PlaywrightElement> }>
 
@@ -12,7 +12,7 @@ test.before(async (t) => {
     t.context.hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await t.context.hass.addResource(__dirname + '/resources/custom-card.js', 'module')
+    await t.context.hass.addResource(import.meta.dirname + '/resources/custom-card.js', 'module')
 })
 
 test.after.always(async (t) => await t.context.hass.close())

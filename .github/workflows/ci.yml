@@ -1,0 +1,53 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    test:
+        name: ${{ matrix.installer }} installer
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                installer: [uv, pip]
+        env:
+            # Force the installer so the pip job can't silently pick up a uv on the runner (and vice versa)
+            HASS_TASTE_TEST_INSTALLER: ${{ matrix.installer }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            # uv provisions its own Python matching Home Assistant's requires-python
+            - if: matrix.installer == 'uv'
+              uses: astral-sh/setup-uv@v6
+
+            # pip uses the system python3, so it must satisfy the latest Home Assistant's requires-python.
+            # Read it from PyPI (e.g. ">=3.14.2" -> "3.14") rather than hardcoding a version.
+            - if: matrix.installer == 'pip'
+              id: hass-python
+              run: |
+                  spec=$(curl -fsSL https://pypi.org/pypi/homeassistant/json | jq -r .info.requires_python)
+                  version=$(grep -oE '[0-9]+\.[0-9]+' <<< "$spec" | head -1)
+                  echo "Home Assistant requires Python $spec; using $version"
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+
+            - if: matrix.installer == 'pip'
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ steps.hass-python.outputs.version }}
+
+            - run: npm ci
+            - run: npm run typecheck
+            - run: npm run build
+            - run: npx playwright install --with-deps firefox
+
+            # Installs Home Assistant with the selected installer, boots it, and onboards
+            - name: Install and boot Home Assistant
+              run: node lib/bin.js

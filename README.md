@@ -30,19 +30,27 @@ This guide will walk you through setting up tests for visual regression testing.
 
 I recommend using either [Jest](https://jestjs.io) or [AVA](https://avajs.dev) for writing tests and [Playwright](https://playwright.dev) for browser automation. Both Jest and AVA run test files in parallel, and Playwright allows you to test on Chromium, Firefox, and WebKit. Since Jest has great support for [image snapshots](https://github.com/americanexpress/jest-image-snapshot), this guide will use Jest.
 
-1. Install dependencies
+1. Optional: Install uv (helps speed up the HA download)
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+2. Install dependencies
 
 ```bash
 npm install --save-dev hass-taste-test jest jest-image-snapshot playwright
 ```
 
-2. Verify that Hass Taste Test can download and run Home Assistant:
+3. Verify that Hass Taste Test can download and run Home Assistant:
 
 ```bash
 npx hass-taste-test
 ```
 
-3. Create a tests directory `__tests__` and create a file within it: `__tests__/card.test.js`. Add this code:
+Installing [uv](https://docs.astral.sh/uv/) is strongly recommended: Hass Taste Test uses it when it is on your `PATH`, and it installs Home Assistant much faster and downloads a Python version that Home Assistant supports. Without uv, Hass Taste Test falls back to pip, which uses your `python3`; this must meet Home Assistant's minimum Python version.
+
+4. Create a tests directory `__tests__` and create a file within it: `__tests__/card.test.js`. Add this code:
 
 ```javascript
 const { HomeAssistant, PlaywrightBrowser } = require('hass-taste-test')
@@ -85,7 +93,7 @@ You may now consider customizing your Jest configuration using (`npx jest --init
 
 ## Developing
 
-If you wish to make changes to this repository, follow these instructions. Tests are run with `ts-node`, so no recompilation of typescript is necessary.
+If you wish to make changes to this repository, follow these instructions. The source is written so Node (and Jest, via its built-in type stripping) can run it directly (Node 22.18+), so no recompilation of typescript is necessary.
 
 1. Install dependencies
 
@@ -104,26 +112,26 @@ To update snapshots, use `npx jest -u` and `npx ava -u`.
 
 ### But I want to write my tests in TypeScript
 
-Install [`ts-jest`](https://kulshekhar.github.io/ts-jest/docs/getting-started/installation/), `@types/jest`, and `@types/jest-image-snapshot` along with the other dependencies, then run `npx ts-jest config:init` to configure Jest for Typescript. Browse the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test) for example tests; they are all written in TypeScript.
+Install [`ts-jest`](https://kulshekhar.github.io/ts-jest/docs/getting-started/installation/), `@types/jest`, and `@types/jest-image-snapshot` along with the other dependencies, then run `npx ts-jest config:init` to configure Jest for Typescript. The bundled type declarations require TypeScript 5.0 or later. Browse the [examples](https://github.com/rianadon/hass-taste-test/tree/main/test) for example tests; they are all written in TypeScript.
 
 ## Why visual regression testing?
 
 I could've shown off how you can check that the text in the selectors you care about has the right substrings, or how to check that the correct number of `div`s got added to the special container. Here's why I didn't:
 
--   **These tests are a pain to write**: Home Assistant is very complex, so your card may run into many edge cases that require tests. I believe test quantity is better than test quality for this domain.
--   **Styles don't change much**: Most of the time, you are likely adding additonal features to the card rather than giving it a new paint job; so you won't be needing to update snapshots often. Testing visual regressions ensures that the card will remain stable for the features you've already added.
--   **Cards are small and simple**: Small cards make for small visual diffs, which makes it easy to spot what regressed.
+- **These tests are a pain to write**: Home Assistant is very complex, so your card may run into many edge cases that require tests. I believe test quantity is better than test quality for this domain.
+- **Styles don't change much**: Most of the time, you are likely adding additonal features to the card rather than giving it a new paint job; so you won't be needing to update snapshots often. Testing visual regressions ensures that the card will remain stable for the features you've already added.
+- **Cards are small and simple**: Small cards make for small visual diffs, which makes it easy to spot what regressed.
 
 What if visual regression testing is not for me?
 
--   Grab the card's HTML and [snapshot](https://jestjs.io/docs/snapshot-testing) [it](https://github.com/avajs/ava/blob/main/docs/04-snapshot-testing.md). This works similar to visual regression tests but does not catch CSS changes.
+- Grab the card's HTML and [snapshot](https://jestjs.io/docs/snapshot-testing) [it](https://github.com/avajs/ava/blob/main/docs/04-snapshot-testing.md). This works similar to visual regression tests but does not catch CSS changes.
 
     ```javascript
     expect(await dashboard.cards[0].hmtl()).toMatchSnapshot() // Jest
     t.snapshot(await dashboard.cards[0].hmtl()) // AVA
     ```
 
--   Narrow the card to an important selector and check the text.
+- Narrow the card to an important selector and check the text.
 
     ```javascript
     expect(await dashboard.cards[0].narrow('.text-content').text()).to… // Jest
@@ -132,15 +140,15 @@ What if visual regression testing is not for me?
 
 ## Important concepts
 
--   **Home Assistant objects**: The `HomeAssistant` class creates a new Home Assistant Core instance. Each of these is fully isolated, so you can write multiple tests files each doing wildly different things without worrying about conflicts. They start up in parallel, except for about <100ms when multiple instances coordinate amongst themselves sequentially to choose unique ports and ensure Home Assistant is installed and upgraded.
+- **Home Assistant objects**: The `HomeAssistant` class creates a new Home Assistant Core instance. Each of these is fully isolated, so you can write multiple tests files each doing wildly different things without worrying about conflicts. They start up in parallel, except for about <100ms when multiple instances coordinate amongst themselves sequentially to choose unique ports and ensure Home Assistant is installed and upgraded.
 
     Each instance creates a configuration directory in your [temporary directory](https://en.wikipedia.org/wiki/Temporary_folder), and these are deleted when `hass.close()` is called. The Home Assistant Core virtual environment is also stored in the temp directory, but is kept around for reuse.
 
--   **Dashboards**: Individual tests are isolated by using unique Lovelace Dashboards. This isolation is good for tracking down which test broke and for, if you are using AVA, running tests within a file in parallel. The name and id for dashboards are automatically generated.
+- **Dashboards**: Individual tests are isolated by using unique Lovelace Dashboards. This isolation is good for tracking down which test broke and for, if you are using AVA, running tests within a file in parallel. The name and id for dashboards are automatically generated.
 
     You can grab references to cards and elements using `dashboard.cards[0]` or `dashboards.cards[1].narrow('.text-content')`. These are merely references; the test will not look for these elements inside the page until you call `.screenshot()`, `.html()`, or `.text()`, which all return [Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
 
--   **Browser Integrations**: Hass Taste Test only requires a browser for working with cards in the dashboard; Home Assistant is configured entirely through the REST API. If you'd like to use the Dashboard card methods, you'll need to pass a browser integration instance to the `browser` option when configuring a `HomeAssistant` object.
+- **Browser Integrations**: Hass Taste Test only requires a browser for working with cards in the dashboard; Home Assistant is configured entirely through the REST API. If you'd like to use the Dashboard card methods, you'll need to pass a browser integration instance to the `browser` option when configuring a `HomeAssistant` object.
 
     Currently only [Playwright](https://playwright.dev) is supported, but you can write your own for other tools.
 
@@ -205,7 +213,6 @@ Configures, starts, and connects to a new Home Assistant instance. Appends the s
 
 | Option             | Description                                                                              | Default     |
 | ------------------ | ---------------------------------------------------------------------------------------- | ----------- |
-| `python`           | Python executable used to create virtual environment                                     | `python3`   |
 | `hassArgs`         | Arguments to pass to the `hass` binary                                                   | `[]`        |
 | `host`             | Host to which the Home Assistant frontend and api will be bound                          | `127.0.0.1` |
 | `port`             | Port used to host the Home Assistant instance. If `null`, an unused port will be chosen. | `null`      |
@@ -262,8 +269,8 @@ Creates and configures a dashboard using `createDashboard` and `setDashboardView
 
 Cards should be listed in `config`, and options allows you to set:
 
--   `colorScheme`: Can be `light` or `dark` to use the page's light or dark theme
--   That's all!
+- `colorScheme`: Can be `light` or `dark` to use the page's light or dark theme
+- That's all!
 
 #### `async close()`
 
@@ -295,10 +302,10 @@ Returns a Buffer containing image data for the card's screenshot.
 
 Returns normalized HTML for of the card. This differs from `outerHTML` in that:
 
--   Traversal crosses Shadow DOM boundaries
--   Polymer and Lit properties are included as attributes
--   Indentation is normalized
--   Attributes are sorted by name, and you can ignore attributes (`options.ignoreAttributes`)
--   Script and style tags are not included (`options.ignoreTags`)
--   The children of Common Home Assistant elements are not included (`options.ignoreChildren` for descendants, `options.ignoreShadowChildren` for Shadow DOM children)
--   Empty and undefined attributes are not included
+- Traversal crosses Shadow DOM boundaries
+- Polymer and Lit properties are included as attributes
+- Indentation is normalized
+- Attributes are sorted by name, and you can ignore attributes (`options.ignoreAttributes`)
+- Script and style tags are not included (`options.ignoreTags`)
+- The children of Common Home Assistant elements are not included (`options.ignoreChildren` for descendants, `options.ignoreShadowChildren` for Shadow DOM children)
+- Empty and undefined attributes are not included

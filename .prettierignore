@@ -1,4 +1,3 @@
 lib
-tsconfig.json
 test/snapshots
 test/__snapshots__

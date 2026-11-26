@@ -1,25 +1,27 @@
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
 import { basename, join } from 'path'
 import { tmpdir } from 'os'
-import fetch from 'node-fetch'
 import * as fs from 'fs/promises'
 import * as net from 'net'
 import * as hass from 'home-assistant-js-websocket'
-import { createSocket } from './socket'
-import {
+import { createSocket } from './socket.ts'
+import type {
+    BrowserIntegration,
     BrowserPage,
     DashboardOptions,
     DiffOptions,
     LovelaceDashboardCreateParams,
     LovelaceResourceType,
-} from './types'
-import { BrowserIntegration } from './types'
+} from './types.ts'
 import lockfile from 'proper-lockfile'
-import { Collection, subscribeEntities, HassEntities } from 'home-assistant-js-websocket'
-export { PlaywrightBrowser, PlaywrightElement } from './integrations/playwright'
+import { subscribeEntityStates, type HassEntityStates } from 'home-assistant-js-websocket'
+export {
+    PlaywrightBrowser,
+    PlaywrightPage,
+    type PlaywrightElement,
+} from './integrations/playwright.ts'
 
 interface HassOptions<E> {
-    python: string
     hassArgs: string[]
     host: string
     port: number | null
@@ -31,20 +33,41 @@ interface HassOptions<E> {
     browser?: BrowserIntegration<E>
 }
 
+type Installer = 'uv' | 'pip'
+
 interface CacheConf {
     latestHass: string
+    requiresPython: string
     startPort: number
 }
 
 /** Sleeps for 100 ms */
 const sleep = () => new Promise((r) => setTimeout(r, 100))
 
-const exec = (command: string, args: string[]) =>
-    new Promise((resolve, reject) => {
-        const proc = spawn(command, args, { stdio: 'inherit' })
+/** Runs a command, rejecting if it cannot be started or exits with a non-zero code */
+const exec = (command: string, args: string[], quiet = false) =>
+    new Promise<void>((resolve, reject) => {
+        const proc = spawn(command, args, { stdio: quiet ? 'ignore' : 'inherit' })
         proc.on('error', (err) => reject(err))
-        proc.on('close', (code) => resolve(code))
+        proc.on('close', (code) => {
+            if (code === 0) resolve()
+            else reject(new Error(`${command} ${args.join(' ')} exited with code ${code}`))
+        })
     })
+
+const exists = (path: string) =>
+    fs.access(path).then(
+        () => true,
+        () => false,
+    )
+
+/** Whether uv (https://docs.astral.sh/uv/) is available on the PATH */
+let uvAvailable: Promise<boolean> | undefined
+const hasUv = () =>
+    (uvAvailable ??= exec('uv', ['--version'], true).then(
+        () => true,
+        () => false,
+    ))
 
 export class HomeAssistant<E> {
     private venvDir!: string
@@ -57,15 +80,13 @@ export class HomeAssistant<E> {
     private accessToken!: string
     private options: HassOptions<E>
     private dashboards = 0
-    private entities: HassEntities = {}
-    private started = false
+    private entities: HassEntityStates = {}
 
     public ws!: hass.Connection
 
     private constructor(options?: Partial<HassOptions<E>>) {
         this.venvDir = join(tmpdir(), 'hasstest-venv')
         this.options = {
-            python: 'python3',
             hassArgs: [],
             host: '127.0.0.1',
             port: null,
@@ -81,8 +102,9 @@ export class HomeAssistant<E> {
     private path_confFile = () => join(this.configDir, 'configuration.yaml')
     private path_componentsDir = () => join(this.configDir, 'custom_components')
     private path_wwwDir = () => join(this.configDir, 'www')
+    private path_storageDir = () => join(this.configDir, '.storage')
     private path_hass = () => join(this.venvDir, 'bin/hass')
-    private path_pip = () => join(this.venvDir, 'bin/pip')
+    private path_python = () => join(this.venvDir, 'bin/python')
     private path_cache = () => join(tmpdir(), 'hasstest-cache')
 
     /** Create and connect to an isolated Home Assistant instance */
@@ -111,52 +133,112 @@ export class HomeAssistant<E> {
 
         // Step 2: Create venv and sort out networking under lock
         const releaseLock = await this.acquireLock()
-        this.cache = await this.readCache()
-        await Promise.all([
-            this.findPort().then(() => this.writeYAMLConfiguration(config)),
-            this.setupVenv(),
-        ])
-        await fs.writeFile(this.path_cache(), JSON.stringify(this.cache))
-        await releaseLock()
+        try {
+            this.cache = await this.readCache()
+            await Promise.all([this.findPort(), this.setupVenv()])
+            await fs.writeFile(this.path_cache(), JSON.stringify(this.cache))
+        } finally {
+            await releaseLock()
+        }
+        await this.writeConfiguration(config)
 
         // Step 3: Start Home Assistant and onboard
-        this.process = spawn(
-            this.path_hass(),
-            ['-c', this.configDir, '-v', ...this.options.hassArgs],
-            { stdio: 'pipe' },
-        )
-        this.process.stderr!.on('data', (d) => {
-            if (d.includes('Starting Home Assistant')) this.started = true
-            process.stderr.write(d)
+        this.process = spawn(this.path_hass(), ['-c', this.configDir, ...this.options.hassArgs], {
+            stdio: 'pipe',
         })
-        this.process.on('error', (e) => {
-            console.error(
-                `----\nHome Assistant is having trouble starting. This is likely due to a problem with your virtual environment; try removing the venv folder at ${this.venvDir} and re-running hass-taste-test\n---`,
-            )
-            throw e
-        })
-        await new Promise<void>(async (resolve, reject) => {
+        this.process.stderr!.pipe(process.stderr)
+        await new Promise<void>((resolve, reject) => {
+            let exited = false
+            this.process.on('error', (e) => {
+                exited = true
+                console.error(
+                    `----\nHome Assistant is having trouble starting. This is likely due to a problem with your virtual environment; try removing the venv folder at ${this.venvDir} and re-running hass-taste-test\n---`,
+                )
+                reject(e)
+            })
             // Wait for Home Assistant to start, but quit early if the process exits
             this.process.on('close', (code) => {
-                if (code != 0) reject(new Error(`Home Assistant exited with code ${code}`))
+                exited = true
+                reject(new Error(`Home Assistant exited with code ${code}`))
             })
-            while (!this.started || !(await this.isUp())) await sleep()
-            resolve()
+            ;(async () => {
+                while (!exited && !(await this.isUp())) await sleep()
+                resolve()
+            })()
         })
         await this.onboard()
+        await this.waitUntilRunning()
     }
 
-    /** Write configuration.yaml */
-    private async writeYAMLConfiguration(additionalConfig: string) {
-        const config = [
-            'default_config:',
-            'frontend:',
-            'http:',
-            `  server_host: ${this.options.host}`,
-            `  server_port: ${this.chosenPort}`,
-            additionalConfig,
-        ].join('\n')
-        fs.writeFile(this.path_confFile(), config)
+    /** Write configuration.yaml, plus HTTP settings in whichever form this Home Assistant expects */
+    private async writeConfiguration(additionalConfig: string) {
+        // Only the frontend: its dependencies cover everything Hass Taste Test uses (auth, onboarding,
+        // config entries, lovelace, repairs, websocket API). default_config would also start ~20 more
+        // integrations (bluetooth, zeroconf, cloud, ...) that slow startup and fill the logs.
+        const config = ['frontend:']
+        // Keep test output readable: only log errors, unless the caller configures logging themselves
+        if (!/^logger:/m.test(additionalConfig)) config.push('logger:', '  default: error')
+        if (await this.usesHttpStorage()) {
+            await this.writeHttpStorage()
+        } else {
+            config.push(
+                'http:',
+                `  server_host: ${this.options.host}`,
+                `  server_port: ${this.chosenPort}`,
+            )
+        }
+        config.push(additionalConfig)
+        await fs.writeFile(this.path_confFile(), config.join('\n'))
+        await this.writeOnboardingStorage()
+    }
+
+    /**
+     * Newer Home Assistant versions keep HTTP settings in `.storage/http` and only import the
+     * `http:` YAML block once. That import is applied as an unconfirmed trial configuration,
+     * which pops up a confirmation dialog in the frontend and reverts (restarting Home
+     * Assistant) after 5 minutes. Detect these versions so we can skip the YAML entirely.
+     */
+    private async usesHttpStorage() {
+        const configModule = join(
+            await this.sitePackages(),
+            'homeassistant/components/http/config.py',
+        )
+        const source = await fs.readFile(configModule, 'utf-8').catch(() => '')
+        return source.includes('yaml_migration_done')
+    }
+
+    /**
+     * Seed the HTTP config store so Home Assistant boots straight into our host and port.
+     * This uses the original (version 1) storage format, which Home Assistant migrates on load
+     * into a confirmed ("stable") config with all defaults filled in.
+     */
+    private async writeHttpStorage() {
+        await fs.mkdir(this.path_storageDir(), { recursive: true })
+        await fs.writeFile(
+            join(this.path_storageDir(), 'http'),
+            JSON.stringify({
+                version: 1,
+                minor_version: 1,
+                key: 'http',
+                data: { server_host: [this.options.host], server_port: this.chosenPort },
+            }),
+        )
+    }
+
+    /**
+     * Seed the onboarding store so the core config and analytics steps start out done. Finishing
+     * the core config step kicks off config flows for shopping_list, met, google_translate, and
+     * radio_browser, which are never needed for tests and log errors when Home Assistant is closed
+     * before they finish setting up. Storage version 2 predates both steps, so every Home Assistant
+     * release since then migrates this file by marking them done, leaving only the user and
+     * integration steps (which hand us auth codes) for onboard() to complete.
+     */
+    private async writeOnboardingStorage() {
+        await fs.mkdir(this.path_storageDir(), { recursive: true })
+        await fs.writeFile(
+            join(this.path_storageDir(), 'onboarding'),
+            JSON.stringify({ version: 2, minor_version: 1, key: 'onboarding', data: { done: [] } }),
+        )
     }
 
     /** Symlink custom component directories to the configuration directory */
@@ -186,35 +268,67 @@ export class HomeAssistant<E> {
 
     /** Find an open port to launch Home Assistant */
     private async findPort() {
-        this.chosenPort = this.cache.startPort++
-        const server = net.createServer()
-        server.listen(this.chosenPort, this.options.host)
-        const success = await new Promise((resolve, reject) => {
-            server.on('error', (e: NodeJS.ErrnoException) => {
-                if (e.code === 'EADDRINUSE' || e.code === 'EACCESS') resolve(false)
-                else reject(e)
+        for (;;) {
+            this.chosenPort = this.cache.startPort++
+            const server = net.createServer()
+            const success = await new Promise<boolean>((resolve, reject) => {
+                server.on('error', (e: NodeJS.ErrnoException) => {
+                    if (e.code === 'EADDRINUSE' || e.code === 'EACCES') resolve(false)
+                    else reject(e)
+                })
+                server.on('listening', () => server.close(() => resolve(true)))
+                server.listen(this.chosenPort, this.options.host)
             })
-            server.on('listening', () => {
-                server.close()
-                resolve(true)
-            })
-        })
-        if (!success) await this.findPort()
+            if (success) return
+        }
     }
 
-    /** Creates a python virtual environment and installs Home Assistant */
+    /** Creates a python virtual environment and installs Home Assistant (using uv if available) */
+    private async chooseInstaller(): Promise<Installer> {
+        const requested = process.env.HASS_TASTE_TEST_INSTALLER
+        if (requested === 'pip') return 'pip'
+        if (requested === 'uv') {
+            if (!(await hasUv()))
+                throw new Error('The uv installer was requested, but uv is not on the PATH')
+            return 'uv'
+        }
+        if (requested) throw new Error(`Unknown installer "${requested}"; expected "uv" or "pip"`)
+        if (await hasUv()) return 'uv'
+        console.warn(
+            'uv was not found on your PATH; falling back to pip. Install uv (https://docs.astral.sh/uv/) for much faster installs.',
+        )
+        return 'pip'
+    }
+
     private async setupVenv() {
+        const uv = (await this.chooseInstaller()) === 'uv'
+        const python = this.cache.requiresPython
+        const clearFlag = (clear: boolean) => (clear ? ['--clear'] : [])
+        const createVenv = (clear: boolean) =>
+            uv
+                ? exec('uv', ['venv', ...clearFlag(clear), '--python', python, this.venvDir])
+                : exec('python3', ['-m', 'venv', ...clearFlag(clear), this.venvDir])
+        const install = () => {
+            // Pin the version so an outdated interpreter fails loudly instead of resolving an old release
+            const pkg = `homeassistant==${this.cache.latestHass}`
+            return uv
+                ? exec('uv', ['pip', 'install', '--python', this.path_python(), pkg])
+                : exec(this.path_python(), ['-m', 'pip', 'install', pkg])
+        }
+
         // Create virtual environment if it does not already exist
-        await fs
-            .access(this.venvDir)
-            .catch(() => exec(this.options.python, ['-m', 'venv', this.venvDir]))
+        if (!(await exists(this.path_python()))) await createVenv(false)
 
         // Check if homeassistant needs an upgrade; saves a bit of time if it doesn't need one
-        const installed = await this.hassVersion()
-
-        if (!installed || installed !== this.cache.latestHass) {
-            await exec(this.path_pip(), ['install', '--upgrade', 'wheel'])
-            await exec(this.path_pip(), ['install', '--upgrade', 'homeassistant'])
+        if ((await this.hassVersion()) === this.cache.latestHass) return
+        try {
+            await install()
+        } catch (e) {
+            // Most likely the venv's Python is too old for the latest Home Assistant, or the venv
+            // was created by uv (which does not include pip) and pip is now being used. Rebuild it.
+            console.warn(`Installing Home Assistant failed (${e}). Recreating ${this.venvDir}`)
+            await createVenv(true)
+            await install()
         }
     }
 
@@ -222,43 +336,61 @@ export class HomeAssistant<E> {
         try {
             const versionFile = await fs.stat(this.path_cache())
             if (Date.now() - versionFile.mtimeMs < 2000) {
-                return await JSON.parse(await fs.readFile(this.path_cache(), 'utf-8'))
+                const cache = JSON.parse(await fs.readFile(this.path_cache(), 'utf-8'))
+                if (cache.requiresPython) return cache
             }
         } catch (e) {}
         return {
-            latestHass: await this.latestHAVersion(),
+            ...(await this.latestHAVersion()),
             startPort: 8130,
         }
     }
 
-    /** Fetch the latest hass version from pypi */
-    private async latestHAVersion(): Promise<string> {
-        const latest = await fetch('https://pypi.org/pypi/homeassistant/json').then(
-            (r) => r.json() as any,
-        )
-        return latest.info.version
+    /** Fetch the latest hass version, and the Python versions it supports, from pypi */
+    private async latestHAVersion() {
+        const response = await fetch('https://pypi.org/pypi/homeassistant/json')
+        if (!response.ok) throw new Error(`Could not query PyPI: HTTP ${response.status}`)
+        const latest = (await response.json()) as any
+        return {
+            latestHass: latest.info.version as string,
+            requiresPython: (latest.info.requires_python as string) || '3',
+        }
+    }
+
+    /** Path to the venv's site-packages directory */
+    private async sitePackages() {
+        const libFolders = await fs.readdir(join(this.venvDir, 'lib')).catch(() => [])
+        const python = libFolders.find((f) => f.startsWith('python'))
+        if (!python) throw new Error(`Could not find a Python installation in ${this.venvDir}`)
+        return join(this.venvDir, 'lib', python, 'site-packages')
     }
 
     /** Finds the version of Home Assistant installed, if any */
     private async hassVersion(): Promise<string | null> {
-        const libFolders = await fs.readdir(join(this.venvDir, 'lib'))
-        const libs = await Promise.all(
-            libFolders.map((f) => fs.readdir(join(this.venvDir, 'lib', f, 'site-packages'))),
-        )
-        const homeAssistant = libs
-            .flat()
+        // An interrupted install can leave package metadata behind without the entry point
+        if (!(await exists(this.path_hass()))) return null
+        const files = await this.sitePackages()
+            .then((dir) => fs.readdir(dir))
+            .catch(() => [] as string[])
+        const homeAssistant = files
             .map((f) => f.match(/^homeassistant-(.*)\.dist-info/))
             .find((f) => f !== null)
         return homeAssistant ? homeAssistant[1] : null
     }
 
-    /** Checks if Home Assistant is listening on its TCP port */
+    /** Checks if Home Assistant is serving the onboarding API, which onboard() starts with */
     private isUp = () =>
-        new Promise((resolve) => {
-            net.createConnection(this.chosenPort, this.options.host)
-                .on('connect', () => resolve(true))
-                .on('error', () => resolve(false))
-        })
+        fetch(this.url + '/api/onboarding')
+            .then((response) => response.ok)
+            .catch(() => false)
+
+    /**
+     * Wait for Home Assistant to finish starting. Until then it has not installed its signal
+     * handlers, so close() would interrupt startup and log a KeyboardInterrupt traceback.
+     */
+    private async waitUntilRunning() {
+        while ((await hass.getConfig(this.ws)).state !== 'RUNNING') await sleep()
+    }
 
     /** Complete onboarding and fetch short-lived access token */
     private async onboard() {
@@ -271,20 +403,18 @@ export class HomeAssistant<E> {
                     username: this.options.username,
                     password: this.options.password,
                 })
-                if (login.auth_code) break
+                if (login?.auth_code) break
                 else await sleep()
             } catch (e) {
                 console.warn(e)
                 await sleep()
             }
         }
-        if (!login.auth_code) throw new Error('No auth code found')
+        if (!login?.auth_code) throw new Error('Onboarding failed: no auth code found')
         this.accessCode = login.auth_code
         await this.launchWebsocket(this.accessCode)
 
-        // Step through the onboarding pages
-        await this.post('/api/onboarding/core_config', {}, true)
-        await this.post('/api/onboarding/analytics', {}, true)
+        // Core config and analytics were already marked done (see writeOnboardingStorage)
         const response = await this.post(
             '/api/onboarding/integration',
             { redirect_uri: this.url + '/?auth_callback=1' },
@@ -371,7 +501,7 @@ export class HomeAssistant<E> {
             auth,
             createSocket: async () => createSocket(auth, false),
         })
-        subscribeEntities(this.ws, (e) => (this.entities = { ...this.entities, ...e }))
+        subscribeEntityStates(this.ws, (e) => (this.entities = { ...this.entities, ...e }))
     }
 
     public async addIntegration(name: string) {
@@ -446,7 +576,7 @@ export class HomeAssistant<E> {
     async Dashboard(config: object[], options?: DashboardOptions) {
         if (!this.options.browser)
             throw new Error(
-                'Cannot launch a dashboard without a browser integration. Make sure to specify options.integration',
+                'Cannot launch a dashboard without a browser integration. Make sure to specify options.browser',
             )
         const dashboard = await this.createDashboard({ title: options?.title })
         await this.setDashboardView(dashboard, config)
@@ -466,22 +596,33 @@ export class HomeAssistant<E> {
     async close() {
         if (this.options.browser) await this.options.browser.close()
         if (this.ws) this.ws.close()
-        if (this.process) {
+        const running =
+            this.process?.pid !== undefined &&
+            this.process.exitCode === null &&
+            this.process.signalCode === null
+        if (running) {
+            const exited = new Promise((resolve) => this.process.once('exit', resolve))
             this.process.kill('SIGINT')
-            await new Promise((resolve) => this.process.on('exit', resolve))
+            await exited
         }
-        if (this.configDir) await fs.rm(this.configDir, { recursive: true })
+        if (this.configDir) await fs.rm(this.configDir, { recursive: true, force: true })
     }
 
     public HassDashboard = class {
         public cards: HassCard<E>[] = []
+        public parent: HomeAssistant<E>
+        public path: string
+        public page: BrowserPage<E>
 
         constructor(
-            public parent: HomeAssistant<E>,
-            public path: string,
+            parent: HomeAssistant<E>,
+            path: string,
             config: object[],
-            public page: BrowserPage<E>,
+            page: BrowserPage<E>,
         ) {
+            this.parent = parent
+            this.path = path
+            this.page = page
             for (let i = 0; i < config.length; i++) {
                 this.cards.push(new HassCard(i, page))
             }
@@ -500,12 +641,12 @@ export class HomeAssistant<E> {
 
 export class HassCard<E> {
     private selectors: string[]
+    private n: number
+    private page: BrowserPage<E>
 
-    constructor(
-        private n: number,
-        private page: BrowserPage<E>,
-        selectors?: string[],
-    ) {
+    constructor(n: number, page: BrowserPage<E>, selectors?: string[]) {
+        this.n = n
+        this.page = page
         this.selectors = selectors || []
     }
 

@@ -1,23 +1,32 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`Custom Component Card 1`] = `
-"<scheduler-card _config="[object Object]" schedules="" showDiscovered="false" translationsLoaded="true">
-  <ha-card raised="false">
-    <slot></slot>
-    <div class="card-header">
-      <div class="name">
-        Scheduler
+"<hui-card preview="false">
+  <scheduler-card _config="[object Object]">
+    <ha-card raised="false">
+      <slot></slot>
+      <div class="card-header">
+        <div class="name">
+          Scheduler
+        </div>
       </div>
-    </div>
-    <div class="card-content">
-      <div>
-        There are no items to show
+      <div class="card-content" id="states">
+        <div>
+          There are no items to show
+        </div>
       </div>
-    </div>
-    <div class="card-actions">
-      <mwc-button dense="false" disabled="false" expandContent="false" fullwidth="false" icon="" label="" outlined="false" raised="false" trailingIcon="false" unelevated="false">…</mwc-button>
-    </div>
-  </ha-card>
-</scheduler-card>
+      <div class="card-actions">
+        <ha-button accessibleLabel="" appearance="plain" ariaLabel="null" customError="null" didSSR="false" disabled="false" iconTag="wa-icon" loading="false" name="null" pill="false" size="m" title="" type="button" variant="brand" withCaret="false" withEnd="false" withStart="false">
+          <button aria-busy="false" class="button has-label" part="base button" role="button" tabindex="0" title="" type="button">
+            <slot class="start" name="start" part="start"></slot>
+            <slot class="label" part="label"></slot>
+            <slot class="end" name="end" part="end"></slot>
+          </button>
+          Add
+        </ha-button>
+      </div>
+    </ha-card>
+  </scheduler-card>
+</hui-card>
 "
 `;

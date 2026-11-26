@@ -1,9 +1,7 @@
-import { Browser, ElementHandle, Page, LaunchOptions, BrowserContext } from 'playwright'
 import { chromium, webkit, firefox } from 'playwright'
-import { readFileSync } from 'fs'
-import { BrowserIntegration, BrowserPage, DashboardOptions, DiffOptions } from '../types'
-
-const htmlScript = readFileSync(__dirname + '/../../lib/integrations/get-diffable-html.js', 'utf-8')
+import type { Browser, ElementHandle, Page, LaunchOptions, BrowserContext } from 'playwright'
+import type { BrowserIntegration, BrowserPage, DashboardOptions, DiffOptions } from '../types.ts'
+import { getDiffableHTML } from './get-diffable-html.ts'
 
 export type PlaywrightElement = ElementHandle<Node>
 
@@ -15,7 +13,7 @@ export class PlaywrightBrowser implements BrowserIntegration<PlaywrightElement> 
     constructor(browserName: string, options?: LaunchOptions) {
         if (browserName !== 'chromium' && browserName !== 'webkit' && browserName !== 'firefox')
             throw new Error(
-                `Browser name ${browserName} must be one of chromium, webkit, or firefox`
+                `Browser name ${browserName} must be one of chromium, webkit, or firefox`,
             )
         this.browserName = browserName
         this.browserPromise = PlaywrightBrowser.browsers[browserName].launch(options)
@@ -53,20 +51,25 @@ export class PlaywrightBrowser implements BrowserIntegration<PlaywrightElement> 
 }
 
 export class PlaywrightPage implements BrowserPage<PlaywrightElement> {
-    constructor(private page: Page) {}
+    private page: Page
+
+    constructor(page: Page) {
+        this.page = page
+    }
 
     async getNthCard(n: number) {
         return await this.page.waitForSelector(`.column>*:nth-child(${n + 1})`)
     }
 
-    async shadowHTML(element: PlaywrightElement, options?: DiffOptions) {
+    async shadowHTML(element: PlaywrightElement, options?: Partial<DiffOptions>) {
         if (!element) throw new Error('shadowHTML expects a non-null element')
-        const func = new Function('args', htmlScript + 'return getDiffableHTML(args[0], args[1])')
-        return (await this.page.evaluate(func as any, [element, options])) as string
+        return await element.evaluate(getDiffableHTML, options)
     }
 
     async screenshot(element: PlaywrightElement) {
-        return await element.screenshot()
+        // The frontend fades the page in when a dashboard opens. Finish those animations first so
+        // the screenshot doesn't depend on how far along the fade is.
+        return await element.screenshot({ animations: 'disabled' })
     }
 
     async find(element: PlaywrightElement, selector: string) {

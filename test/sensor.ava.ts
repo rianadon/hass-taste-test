@@ -1,5 +1,5 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
-import anyTest, { TestFn } from 'ava'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
+import anyTest, { type TestFn } from 'ava'
 
 const test = anyTest as TestFn<{ hass: HomeAssistant<PlaywrightElement> }>
 
@@ -30,7 +30,7 @@ test('light theme', async (t) => {
 test('dark theme', async (t) => {
     const dashboard = await t.context.hass.Dashboard(
         [{ type: 'sensor', entity: 'sensor.test_sensor' }],
-        { colorScheme: 'dark' }
+        { colorScheme: 'dark' },
     )
 
     t.is((await t.context.hass.states())['sensor.test_sensor'].state, '42')

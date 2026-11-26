@@ -1,4 +1,4 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
 expect.extend({ toMatchImageSnapshot })
@@ -14,7 +14,7 @@ beforeAll(async () => {
     hass = await HomeAssistant.create(CONFIGURATION_YAML, {
         browser: new PlaywrightBrowser(process.env.BROWSER || 'firefox'),
     })
-    await hass.addResource(__dirname + '/resources/custom-card.js', 'module')
+    await hass.addResource(import.meta.dirname + '/resources/custom-card.js', 'module')
 }, 30000)
 afterAll(async () => await hass.close())
 

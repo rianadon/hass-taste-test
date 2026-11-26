@@ -1,4 +1,4 @@
-import { HomeAssistant, PlaywrightBrowser, PlaywrightElement } from '../src'
+import { HomeAssistant, PlaywrightBrowser, type PlaywrightElement } from '../src/index.ts'
 import { toMatchImageSnapshot } from 'jest-image-snapshot'
 
 expect.extend({ toMatchImageSnapshot })
@@ -39,7 +39,7 @@ it('input_number slider', async () => {
         'input_number',
         'set_value',
         { value: 5 },
-        { entity_id: 'input_number.slider1' }
+        { entity_id: 'input_number.slider1' },
     )
     expect(await dashboard.cards[0].html()).toMatchSnapshot()
 
@@ -54,7 +54,7 @@ it('input_number box', async () => {
         'input_number',
         'set_value',
         { value: 5 },
-        { entity_id: 'input_number.box1' }
+        { entity_id: 'input_number.box1' },
     )
     expect(await dashboard.cards[0].html()).toMatchSnapshot()
 })
