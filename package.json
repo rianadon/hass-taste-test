@@ -1,6 +1,6 @@
 {
     "name": "hass-taste-test",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Integration testing for Home Assistant cards",
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
@@ -35,7 +35,7 @@
     "devDependencies": {
         "@types/jest": "^30.0.0",
         "@types/jest-image-snapshot": "^6.4.2",
-        "@types/node": "^22.0.0",
+        "@types/node": "^26.6.11",
         "@types/proper-lockfile": "^4.1.4",
         "@types/ws": "^8.18.2",
         "ava": "^8.5.0",
@@ -46,7 +46,7 @@
         "playwright": "^1.65.1",
         "prettier": "^3.10.1",
         "rimraf": "^6.1.4",
-        "typescript": "~5.9.3"
+        "typescript": "~7.0.2"
     },
     "prettier": {
         "printWidth": 100,
