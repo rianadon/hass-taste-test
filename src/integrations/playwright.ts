@@ -67,6 +67,12 @@ export class PlaywrightPage implements BrowserPage<PlaywrightElement> {
     }
 
     async screenshot(element: PlaywrightElement) {
+        // Playwright's `animations: 'disabled'` only finishes transitions that have already started.
+        // In Firefox and Chromium it doesn't flush styles first, so a state change that was just rendered
+        // may not have started its transition yet and gets captured on its first frame. Force a style
+        // flush so it starts and is fast-forwarded to its final state.
+        await element.evaluate((el: Element) => el.getBoundingClientRect())
+
         // The frontend fades the page in when a dashboard opens. Finish those animations first so
         // the screenshot doesn't depend on how far along the fade is.
         return await element.screenshot({ animations: 'disabled' })

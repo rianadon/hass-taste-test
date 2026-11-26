@@ -41,6 +41,10 @@ interface CacheConf {
     startPort: number
 }
 
+/** First port tried for Home Assistant, and how many ports to cycle through before wrapping */
+const FIRST_PORT = 8130
+const PORT_RANGE = 1000
+
 /** Sleeps for 100 ms */
 const sleep = () => new Promise((r) => setTimeout(r, 100))
 
@@ -333,17 +337,22 @@ export class HomeAssistant<E> {
     }
 
     private async readCache(): Promise<CacheConf> {
+        let cached: Partial<CacheConf> = {}
+        let fresh = false
         try {
-            const versionFile = await fs.stat(this.path_cache())
-            if (Date.now() - versionFile.mtimeMs < 2000) {
-                const cache = JSON.parse(await fs.readFile(this.path_cache(), 'utf-8'))
-                if (cache.requiresPython) return cache
-            }
+            const cacheFile = await fs.stat(this.path_cache())
+            cached = JSON.parse(await fs.readFile(this.path_cache(), 'utf-8'))
+            fresh = Date.now() - cacheFile.mtimeMs < 2000
         } catch (e) {}
-        return {
-            ...(await this.latestHAVersion()),
-            startPort: 8130,
-        }
+
+        // Always continue from the last port handed out, even when the cache is stale.
+        let startPort = cached.startPort ?? FIRST_PORT
+        if (!(startPort >= FIRST_PORT && startPort < FIRST_PORT + PORT_RANGE))
+            startPort = FIRST_PORT
+
+        if (fresh && cached.requiresPython && cached.latestHass)
+            return { ...(cached as CacheConf), startPort }
+        return { ...(await this.latestHAVersion()), startPort }
     }
 
     /** Fetch the latest hass version, and the Python versions it supports, from pypi */
